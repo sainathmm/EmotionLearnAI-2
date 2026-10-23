@@ -279,33 +279,45 @@ def detect_faces_and_landmarks(img: np.ndarray) -> Dict[str, Any]:
 
     # Robust multi-stage OpenCV cascade detection
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    gray_eq = cv2.equalizeHist(gray)
+
+    # Performance optimization: if input frame is large (e.g. 640x480 or 720p),
+    # downscale for fast cascade detection while preserving full image for cropping.
+    scale = 1.0
+    if max(h, w) > 400:
+        scale = 360.0 / float(max(h, w))
+        det_gray = cv2.resize(gray, (int(round(w * scale)), int(round(h * scale))))
+    else:
+        det_gray = gray
+    det_gray_eq = cv2.equalizeHist(det_gray)
 
     # 1. Primary detector: frontalface_alt2 on contrast-normalized image
+    min_sz = max(24, int(36 * scale))
     faces = _FACE_CASCADE_ALT2.detectMultiScale(
-        gray_eq, scaleFactor=1.1, minNeighbors=4, minSize=(36, 36)
+        det_gray_eq, scaleFactor=1.1, minNeighbors=4, minSize=(min_sz, min_sz)
     )
 
     # 2. Try on raw grayscale if no face found
     if len(faces) == 0:
         faces = _FACE_CASCADE_ALT2.detectMultiScale(
-            gray, scaleFactor=1.1, minNeighbors=3, minSize=(36, 36)
+            det_gray, scaleFactor=1.1, minNeighbors=3, minSize=(min_sz, min_sz)
         )
 
     # 3. Fallback to frontalface_default
     if len(faces) == 0:
+        min_sz_def = max(20, int(30 * scale))
         faces = _FACE_CASCADE_DEFAULT.detectMultiScale(
-            gray_eq, scaleFactor=1.1, minNeighbors=3, minSize=(30, 30)
+            det_gray_eq, scaleFactor=1.1, minNeighbors=3, minSize=(min_sz_def, min_sz_def)
         )
     if len(faces) == 0:
+        min_sz_sub = max(18, int(28 * scale))
         faces = _FACE_CASCADE_DEFAULT.detectMultiScale(
-            gray, scaleFactor=1.05, minNeighbors=2, minSize=(28, 28)
+            det_gray, scaleFactor=1.05, minNeighbors=2, minSize=(min_sz_sub, min_sz_sub)
         )
 
     # 4. Profile cascade fallback for moderate head turns
     if len(faces) == 0 and not _FACE_CASCADE_PROFILE.empty():
         faces = _FACE_CASCADE_PROFILE.detectMultiScale(
-            gray_eq, scaleFactor=1.1, minNeighbors=3, minSize=(36, 36)
+            det_gray_eq, scaleFactor=1.1, minNeighbors=3, minSize=(min_sz, min_sz)
         )
 
     if len(faces) == 0:
@@ -319,9 +331,20 @@ def detect_faces_and_landmarks(img: np.ndarray) -> Dict[str, Any]:
     num_faces = len(faces)
     status = 'single_face' if num_faces == 1 else 'multiple_faces'
 
-    # Pick largest face
+    # Pick largest face and scale back to original image coordinates
     primary_rect = max(faces, key=lambda r: r[2] * r[3])
-    fx, fy, fw, fh = primary_rect
+    if scale != 1.0:
+        inv_scale = 1.0 / scale
+        fx = int(round(primary_rect[0] * inv_scale))
+        fy = int(round(primary_rect[1] * inv_scale))
+        fw = int(round(primary_rect[2] * inv_scale))
+        fh = int(round(primary_rect[3] * inv_scale))
+        fx = max(0, min(w - 1, fx))
+        fy = max(0, min(h - 1, fy))
+        fw = max(1, min(w - fx, fw))
+        fh = max(1, min(h - fy, fh))
+    else:
+        fx, fy, fw, fh = primary_rect
 
     # Search for eyes within top half of face ROI with equalized contrast
     roi_gray = gray[fy:fy + int(fh * 0.65), fx:fx + fw]

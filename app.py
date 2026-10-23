@@ -1667,13 +1667,16 @@ def analyze():
     5. Adaptive Learning Hysteresis & Weak Topic Routing
     """
     d = request.json or {}
+    t_req_start = time.perf_counter()
     sid = d.get('session_id', 'demo')
     if sid not in sessions:
         new_session(sid, d.get('subject', 'Python Basics'))
     s = sessions[sid]
 
     frame_b64 = d.get('frame', '')
+    t0 = time.perf_counter()
     img = decode_base64_frame(frame_b64) if frame_b64 else None
+    t_decode_ms = round((time.perf_counter() - t0) * 1000, 2)
 
     # 1. Emotion Inference with Temporal Fusion
     er = infer_emotion(frame_b64=frame_b64, img=img, session_id=sid)
@@ -1682,7 +1685,9 @@ def analyze():
     s['emotion_log'].append(er['emotion'])
 
     # 2. Attention & 3D Head Pose
+    t0 = time.perf_counter()
     attention_detail = detect_attention(frame_b64=frame_b64, img=img, session_id=sid, primary_face=er.get('primary_face'))
+    t_att_ms = round((time.perf_counter() - t0) * 1000, 2)
     s['current_attention_data'] = attention_detail
     s['attention_detail'] = attention_detail
     s['attention_log'].append(attention_detail['attention_score'])
@@ -1709,12 +1714,14 @@ def analyze():
     }
 
     # 5. Multimodal Cognitive State Reasoning
+    t0 = time.perf_counter()
     cog_eval = evaluate_cognitive_state(
         emotion_data=er,
         attention_data=attention_detail,
         performance_data=perf_context,
         previous_state=s.get('current_cog', 'engaged')
     )
+    t_cog_ms = round((time.perf_counter() - t0) * 1000, 2)
     cog = cog_eval['state']
     s['current_cog'] = cog
     s['current_cognitive_data'] = cog_eval
@@ -1799,9 +1806,31 @@ def analyze():
         }
     }
 
-    # Personalized recommendation
+    # Cached Personalized recommendation (prevents redundant DB queries on every video frame)
     uid = session.get('user_id')
-    personal_rec = get_personalized_recommendation(uid) if uid else get_recommendation(sid)
+    now_ts = time.time()
+    if uid:
+        cached_rec = s.get('cached_personal_rec')
+        cached_ts = s.get('cached_personal_rec_ts', 0.0)
+        if not cached_rec or (now_ts - cached_ts > 30.0):
+            personal_rec = get_personalized_recommendation(uid)
+            s['cached_personal_rec'] = personal_rec
+            s['cached_personal_rec_ts'] = now_ts
+        else:
+            personal_rec = cached_rec
+    else:
+        personal_rec = get_recommendation(sid)
+
+    t_total_backend_ms = round((time.perf_counter() - t_req_start) * 1000, 2)
+    timing_info = {
+        "decode_ms": t_decode_ms,
+        "face_detect_ms": er.get('timing', {}).get('face_detect_ms', 0.0),
+        "onnx_inference_ms": er.get('timing', {}).get('onnx_inference_ms', 0.0),
+        "emotion_total_ms": er.get('timing', {}).get('total_ms', 0.0),
+        "attention_ms": t_att_ms,
+        "cognitive_ms": t_cog_ms,
+        "total_backend_ms": t_total_backend_ms
+    }
 
     return jsonify({
         "emotion": er,
@@ -1831,12 +1860,12 @@ def analyze():
         }),
         "break_info": break_info,
         "focus_mode": focus_mode,
+        "timing": timing_info,
         "stats": {
             "difficulty": s['difficulty'],
             "correct": s['correct'],
             "total": s['total_q'],
-            "performance": round(s['correct'] / max(s['total_q'], 1) * 100, 1),
-        },
+        }
     })
 
 
@@ -1855,6 +1884,7 @@ def quiz():
     if sid not in sessions:
         new_session(sid, 'Python Basics')
     s = sessions[sid]
+    s.pop('cached_personal_rec', None)
 
     correct    = bool(d.get('correct', False))
     time_taken = float(d.get('time_taken', 0.0))

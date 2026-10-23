@@ -849,7 +849,12 @@ canvas:not(#snakeCanvas):not(#canvas):not(#handCanvas){display:none}
     <div class="debug-title">⚡ Viva Telemetry Debugger</div>
     <button class="debug-close" onclick="toggleDebugMode()">✕</button>
   </div>
-  <div class="debug-body">
+    <div class="debug-sec">
+      <h4>⚡ Real-Time Pipeline Latency</h4>
+      <div>End-to-End RTT: <b id="dbgLatency">--</b></div>
+      <div>Server Backend: <b id="dbgServerTiming">--</b></div>
+      <div>Upload Payload: <b id="dbgPayloadSize">--</b></div>
+    </div>
     <div class="debug-sec">
       <h4>Vision & Face Pipeline</h4>
       <div>Status: <b id="dbgFaceStatus">--</b></div>
@@ -983,6 +988,11 @@ function setSubject(s, btn){
   }).catch(err => console.error('Subject switch error:', err));
 }
 
+// Configurable frame interval (initial 400ms cadence)
+let EMOTION_PROCESSING_INTERVAL_MS = 400;
+let isAnalyzingFrame = false;
+let lastPayloadKB = 0;
+
 async function toggleCamera(){
   const btn = document.getElementById('camBtn');
   if(!stream){
@@ -991,44 +1001,62 @@ async function toggleCamera(){
       document.getElementById('video').srcObject = stream;
       btn.textContent = '⏹ Stop Camera';
       btn.classList.add('stop');
-      interval = setInterval(captureAndAnalyze, 2000);
+      interval = setInterval(captureAndAnalyze, EMOTION_PROCESSING_INTERVAL_MS);
     }catch(e){
       btn.textContent = '⏹ Stop (Demo Mode)';
       btn.classList.add('stop');
-      interval = setInterval(() => analyzeFrame(null), 2000);
+      interval = setInterval(() => analyzeFrame(null), EMOTION_PROCESSING_INTERVAL_MS);
     }
   }else{
     stream.getTracks().forEach(t => t.stop());
     stream = null;
     clearInterval(interval);
+    isAnalyzingFrame = false;
     btn.textContent = '▶ Start Camera';
     btn.classList.remove('stop');
   }
 }
 
 function captureAndAnalyze(){
-  if(isCalibrating) return;
+  if(isCalibrating || isAnalyzingFrame) return; // Drop frame if previous request still in flight to avoid backlog
   const v = document.getElementById('video');
+  if(!v || !v.videoWidth) return;
   const c = document.getElementById('canvas');
-  const w = v.videoWidth  || 640;
-  const h = v.videoHeight || 480;
-  c.width  = w;
-  c.height = h;
-  c.getContext('2d').drawImage(v, 0, 0, w, h);
-  analyzeFrame(c.toDataURL('image/jpeg', 0.85));
+  const vw = v.videoWidth || 640;
+  const vh = v.videoHeight || 480;
+  // Downscale frame to 360px width before upload to reduce payload by >70% while keeping crisp face detail
+  const targetW = 360;
+  const targetH = Math.round((vh / vw) * targetW) || 270;
+  c.width  = targetW;
+  c.height = targetH;
+  c.getContext('2d').drawImage(v, 0, 0, targetW, targetH);
+  // Quality 0.70 gives ~15-20KB payload instead of 100-300KB
+  const frameB64 = c.toDataURL('image/jpeg', 0.70);
+  lastPayloadKB = Math.round((frameB64.length * 0.75) / 1024);
+  analyzeFrame(frameB64);
 }
 
 async function analyzeFrame(frame){
+  if(isAnalyzingFrame && frame !== null) return;
+  isAnalyzingFrame = true;
+  const tStart = performance.now();
   try{
     const body = {session_id: sessionId};
     if(frame) body.frame = frame;
-    const data = await fetch('/api/analyze', {
+    const res = await fetch('/api/analyze', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify(body)
-    }).then(r => r.json());
+    });
+    const data = await res.json();
+    data._client_rtt_ms = Math.round(performance.now() - tStart);
+    data._payload_kb = lastPayloadKB;
     updateUI(data);
-  }catch(e){console.error('Analysis error:', e);}
+  }catch(e){
+    console.error('Analysis error:', e);
+  }finally{
+    isAnalyzingFrame = false;
+  }
 }
 
 function updateUI(data){
@@ -1240,6 +1268,12 @@ function updateUI(data){
 
   // ── Viva Debug Drawer telemetry updates ──
   if(isDebugOpen){
+    const latEl = document.getElementById('dbgLatency');
+    if(latEl) latEl.textContent = `${data._client_rtt_ms || 0} ms`;
+    const srvEl = document.getElementById('dbgServerTiming');
+    if(srvEl) srvEl.textContent = `${data.timing?.total_backend_ms || 0} ms (ONNX: ${data.timing?.onnx_inference_ms || 0}ms, Det: ${data.timing?.face_detect_ms || 0}ms)`;
+    const payEl = document.getElementById('dbgPayloadSize');
+    if(payEl) payEl.textContent = `${data._payload_kb || 0} KB`;
     document.getElementById('dbgFaceStatus').textContent = e.face_status || 'single_face';
     document.getElementById('dbgQuality').textContent = `${qual.status||'good'} (B:${qual.brightness||0}, Sh:${qual.blur_score||0})`;
     document.getElementById('dbgAlignAngle').textContent = `${e.alignment?.angle_deg || 0}°`;

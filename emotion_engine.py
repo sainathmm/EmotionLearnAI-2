@@ -69,6 +69,8 @@ def set_smoothing_alpha(val: float) -> None:
     EMOTION_SMOOTHING_ALPHA = float(np.clip(val, 0.05, 1.0))
 
 
+import threading
+
 # ── Model Loader Singleton ───────────────────────────────────────────────────
 
 class EmotionModelRunner:
@@ -80,6 +82,7 @@ class EmotionModelRunner:
         self.cv2_net = None
         self.backend = None
         self.input_name = 'Input3'
+        self._lock = threading.Lock()
         self._load()
 
     def _load(self):
@@ -92,12 +95,18 @@ class EmotionModelRunner:
             import onnxruntime as ort
             opts = ort.SessionOptions()
             opts.log_severity_level = 3
+            # Limit thread allocation for cloud containers (Render/Railway) to prevent CPU thrashing
+            cpu_cnt = os.cpu_count() or 1
+            intra_threads = int(os.getenv("ONNX_INTRA_OP_THREADS", min(2, cpu_cnt)))
+            opts.intra_op_num_threads = intra_threads
+            opts.inter_op_num_threads = 1
+            opts.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
             self.ort_session = ort.InferenceSession(
                 self.model_path, opts, providers=['CPUExecutionProvider']
             )
             self.input_name = self.ort_session.get_inputs()[0].name
             self.backend = 'onnxruntime'
-            print(f"[EMOTION] Loaded model via ONNXRuntime (input: {self.input_name})")
+            print(f"[EMOTION] Loaded model via ONNXRuntime (input: {self.input_name}, threads: {intra_threads})")
             return
         except Exception as e:
             print(f"[EMOTION] ONNXRuntime load failed: {e}. Trying cv2.dnn...")
@@ -114,7 +123,7 @@ class EmotionModelRunner:
     def predict(self, blob: np.ndarray) -> np.ndarray:
         """
         Runs inference on blob of shape (1, 1, 64, 64) and returns 8 raw logits.
-        Guarantees finite, non-crashing output under any input state.
+        Guarantees finite, non-crashing output under any input state. Thread-safe.
         """
         # Validate input blob shape & dtype
         if not isinstance(blob, np.ndarray) or blob.shape != (1, 1, 64, 64):
@@ -128,12 +137,15 @@ class EmotionModelRunner:
 
         try:
             if self.ort_session is not None:
+                # ONNX Runtime InferenceSession.run() is natively thread-safe
                 outputs = self.ort_session.run(None, {self.input_name: blob})
                 raw_logits = outputs[0][0]
             elif self.cv2_net is not None:
-                self.cv2_net.setInput(blob)
-                out = self.cv2_net.forward()
-                raw_logits = out[0]
+                # OpenCV DNN forward is not re-entrant; protect with lock
+                with self._lock:
+                    self.cv2_net.setInput(blob)
+                    out = self.cv2_net.forward()
+                    raw_logits = out[0]
             else:
                 raw_logits = np.zeros(8, dtype=np.float32)
         except Exception as e:
@@ -347,6 +359,7 @@ def infer_emotion(
             alignment              (dict)  — Face alignment transform info
             primary_face           (dict)  — Primary face landmarks and bounding box
     """
+    t_start = time.perf_counter()
     if img is None and frame_b64:
         img = decode_base64_frame(frame_b64)
 
@@ -355,6 +368,7 @@ def infer_emotion(
     # 1. Handle missing/corrupt image
     if img is None or not isinstance(img, np.ndarray) or img.size == 0:
         tracker.notify_no_face()
+        t_total = round((time.perf_counter() - t_start) * 1000, 2)
         return {
             'face_detected': False,
             'face_count': 0,
@@ -372,15 +386,24 @@ def infer_emotion(
             'all': {e: round(1.0 / len(PEDAGOGICAL_EMOTIONS), 3) for e in PEDAGOGICAL_EMOTIONS},
             'raw_all': {l: 0.125 for l in ONNX_LABELS},
             'alignment': {'aligned': False, 'angle_deg': 0.0},
-            'primary_face': None
+            'primary_face': None,
+            'timing': {
+                'face_detect_ms': 0.0,
+                'preprocess_ms': 0.0,
+                'onnx_inference_ms': 0.0,
+                'total_ms': t_total
+            }
         }
 
     # 2. Detect faces & landmarks
+    t0 = time.perf_counter()
     det = detect_faces_and_landmarks(img)
+    t_det_ms = round((time.perf_counter() - t0) * 1000, 2)
     face_status = det['face_status']
 
     if not det['face_detected'] or det['primary_face'] is None:
         tracker.notify_no_face()
+        t_total = round((time.perf_counter() - t_start) * 1000, 2)
         return {
             'face_detected': False,
             'face_count': 0,
@@ -398,17 +421,25 @@ def infer_emotion(
             'all': {e: round(1.0 / len(PEDAGOGICAL_EMOTIONS), 3) for e in PEDAGOGICAL_EMOTIONS},
             'raw_all': {l: 0.125 for l in ONNX_LABELS},
             'alignment': {'aligned': False, 'angle_deg': 0.0},
-            'primary_face': None
+            'primary_face': None,
+            'timing': {
+                'face_detect_ms': t_det_ms,
+                'preprocess_ms': 0.0,
+                'onnx_inference_ms': 0.0,
+                'total_ms': t_total
+            }
         }
 
-    # 3. Face Alignment
+    # 3. Face Alignment & Preprocessing
+    t0 = time.perf_counter()
     aligned_face, align_meta = align_face(img, det['primary_face'])
-
-    # 4. Standardized ONNX Preprocessing
     blob = preprocess_emotion_face(aligned_face, target_size=(64, 64), enhance_lighting=True)
+    t_prep_ms = round((time.perf_counter() - t0) * 1000, 2)
 
-    # 5. Run ONNX Model Inference
+    # 4. Run ONNX Model Inference
+    t0 = time.perf_counter()
     raw_logits = _MODEL_RUNNER.predict(blob).astype(np.float64)
+    t_infer_ms = round((time.perf_counter() - t0) * 1000, 2)
 
     # Softmax probabilities directly on model logits
     raw_probs = _softmax(raw_logits)
@@ -436,7 +467,7 @@ def infer_emotion(
     raw_conf = float(ped_dist[raw_dominant])
     is_uncertain = (raw_conf < CONFIDENCE_THRESHOLD)
 
-    # 6. Temporal Fusion & Stability Calculation
+    # 5. Temporal Fusion & Stability Calculation
     bbox = tuple(det['primary_face']['bbox']) if (det['primary_face'] and 'bbox' in det['primary_face']) else None
     smoothed_emo, smoothed_conf, stability, final_uncertain = tracker.add_prediction(
         raw_dominant, raw_conf, ped_dist, is_uncertain, bbox=bbox
@@ -452,6 +483,8 @@ def infer_emotion(
         predicted_expression = smoothed_emo.capitalize()
         display_name = smoothed_emo.capitalize()
         status = "confident"
+
+    t_total_ms = round((time.perf_counter() - t_start) * 1000, 2)
 
     return {
         'face_detected': True,
@@ -470,5 +503,11 @@ def infer_emotion(
         'all': {k: round(float(v), 3) for k, v in ped_dist.items()},
         'raw_all': {k: round(float(v), 3) for k, v in raw_dist.items()},
         'alignment': align_meta,
-        'primary_face': det['primary_face']
+        'primary_face': det['primary_face'],
+        'timing': {
+            'face_detect_ms': t_det_ms,
+            'preprocess_ms': t_prep_ms,
+            'onnx_inference_ms': t_infer_ms,
+            'total_ms': t_total_ms
+        }
     }
