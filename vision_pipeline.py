@@ -28,21 +28,28 @@ except ImportError:
     _MP_AVAILABLE = False
 
 # Multi-stage Cascade Classifiers
-_FACE_CASCADE_ALT2 = cv2.CascadeClassifier(
-    cv2.data.haarcascades + 'haarcascade_frontalface_alt2.xml'
-)
-_FACE_CASCADE_DEFAULT = cv2.CascadeClassifier(
-    cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
-)
-_FACE_CASCADE_PROFILE = cv2.CascadeClassifier(
-    cv2.data.haarcascades + 'haarcascade_profileface.xml'
-)
+class _DummyCascade:
+    def detectMultiScale(self, *args, **kwargs):
+        return ()
+    def empty(self):
+        return True
+
+def _load_cascade(filename: str):
+    try:
+        if hasattr(cv2, 'CascadeClassifier') and hasattr(cv2, 'data') and hasattr(cv2.data, 'haarcascades'):
+            c = cv2.CascadeClassifier(cv2.data.haarcascades + filename)
+            if hasattr(c, 'empty') and not c.empty():
+                return c
+    except Exception as e:
+        print(f"[VISION] Cascade {filename} load warning: {e}")
+    return _DummyCascade()
+
+_FACE_CASCADE_ALT2 = _load_cascade('haarcascade_frontalface_alt2.xml')
+_FACE_CASCADE_DEFAULT = _load_cascade('haarcascade_frontalface_default.xml')
+_FACE_CASCADE_PROFILE = _load_cascade('haarcascade_profileface.xml')
 # Keep legacy _FACE_CASCADE reference for backward compatibility
 _FACE_CASCADE = _FACE_CASCADE_ALT2 if not _FACE_CASCADE_ALT2.empty() else _FACE_CASCADE_DEFAULT
-
-_EYE_CASCADE = cv2.CascadeClassifier(
-    cv2.data.haarcascades + 'haarcascade_eye.xml'
-)
+_EYE_CASCADE = _load_cascade('haarcascade_eye.xml')
 
 # MediaPipe FaceMesh lazy singleton
 _mp_face_mesh = None

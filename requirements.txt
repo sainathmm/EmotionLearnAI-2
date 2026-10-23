@@ -14,8 +14,8 @@ python-dotenv>=1.0.0
 requests>=2.31.0
 
 # Computer Vision & Machine Learning
-# opencv-python-headless is required for headless cloud servers (Render / Linux)
-opencv-python-headless>=4.8.0.76
+# opencv-python-headless 4.x is required (OpenCV 5 alpha breaks CascadeClassifier)
+opencv-python-headless==4.10.0.84
 numpy>=1.26.0
 scipy>=1.11.0
 scikit-learn>=1.4.0
