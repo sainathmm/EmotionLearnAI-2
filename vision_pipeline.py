@@ -291,7 +291,7 @@ def detect_faces_and_landmarks(img: np.ndarray) -> Dict[str, Any]:
     det_gray_eq = cv2.equalizeHist(det_gray)
 
     # 1. Primary detector: frontalface_alt2 on contrast-normalized image
-    min_sz = max(24, int(36 * scale))
+    min_sz = max(20, int(28 * scale))
     faces = _FACE_CASCADE_ALT2.detectMultiScale(
         det_gray_eq, scaleFactor=1.1, minNeighbors=4, minSize=(min_sz, min_sz)
     )
@@ -304,12 +304,12 @@ def detect_faces_and_landmarks(img: np.ndarray) -> Dict[str, Any]:
 
     # 3. Fallback to frontalface_default
     if len(faces) == 0:
-        min_sz_def = max(20, int(30 * scale))
+        min_sz_def = max(18, int(24 * scale))
         faces = _FACE_CASCADE_DEFAULT.detectMultiScale(
             det_gray_eq, scaleFactor=1.1, minNeighbors=3, minSize=(min_sz_def, min_sz_def)
         )
     if len(faces) == 0:
-        min_sz_sub = max(18, int(28 * scale))
+        min_sz_sub = max(16, int(20 * scale))
         faces = _FACE_CASCADE_DEFAULT.detectMultiScale(
             det_gray, scaleFactor=1.05, minNeighbors=2, minSize=(min_sz_sub, min_sz_sub)
         )

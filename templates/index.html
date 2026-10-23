@@ -849,6 +849,7 @@ canvas:not(#snakeCanvas):not(#canvas):not(#handCanvas){display:none}
     <div class="debug-title">⚡ Viva Telemetry Debugger</div>
     <button class="debug-close" onclick="toggleDebugMode()">✕</button>
   </div>
+  <div class="debug-body">
     <div class="debug-sec">
       <h4>⚡ Real-Time Pipeline Latency</h4>
       <div>End-to-End RTT: <b id="dbgLatency">--</b></div>
@@ -988,8 +989,8 @@ function setSubject(s, btn){
   }).catch(err => console.error('Subject switch error:', err));
 }
 
-// Configurable frame interval (initial 400ms cadence)
-let EMOTION_PROCESSING_INTERVAL_MS = 400;
+// Configurable frame interval (smooth, real-time 800ms cadence)
+let EMOTION_PROCESSING_INTERVAL_MS = 800;
 let isAnalyzingFrame = false;
 let lastPayloadKB = 0;
 
@@ -1020,18 +1021,21 @@ async function toggleCamera(){
 function captureAndAnalyze(){
   if(isCalibrating || isAnalyzingFrame) return; // Drop frame if previous request still in flight to avoid backlog
   const v = document.getElementById('video');
-  if(!v || !v.videoWidth) return;
+  if(!v) return;
   const c = document.getElementById('canvas');
+  if(!c) return;
   const vw = v.videoWidth || 640;
   const vh = v.videoHeight || 480;
-  // Downscale frame to 360px width before upload to reduce payload by >70% while keeping crisp face detail
-  const targetW = 360;
-  const targetH = Math.round((vh / vw) * targetW) || 270;
+  // Use 480px width for high fidelity face landmarks with small payload (~25-35KB)
+  const targetW = 480;
+  const targetH = Math.round((vh / vw) * targetW) || 360;
   c.width  = targetW;
   c.height = targetH;
-  c.getContext('2d').drawImage(v, 0, 0, targetW, targetH);
-  // Quality 0.70 gives ~15-20KB payload instead of 100-300KB
-  const frameB64 = c.toDataURL('image/jpeg', 0.70);
+  const ctx = c.getContext('2d');
+  if(!ctx) return;
+  ctx.drawImage(v, 0, 0, targetW, targetH);
+  // Quality 0.75 gives ~25-35KB payload with crisp facial details
+  const frameB64 = c.toDataURL('image/jpeg', 0.75);
   lastPayloadKB = Math.round((frameB64.length * 0.75) / 1024);
   analyzeFrame(frameB64);
 }
@@ -1048,6 +1052,10 @@ async function analyzeFrame(frame){
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify(body)
     });
+    if(!res.ok){
+      console.warn(`Analysis HTTP error: ${res.status}`);
+      return;
+    }
     const data = await res.json();
     data._client_rtt_ms = Math.round(performance.now() - tStart);
     data._payload_kb = lastPayloadKB;

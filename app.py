@@ -83,7 +83,7 @@ try:
     limiter = Limiter(
         app=app,
         key_func=get_remote_address,
-        default_limits=["1000 per day", "300 per hour"],
+        default_limits=["5000 per day", "1200 per hour"],
         storage_uri=os.getenv("REDIS_URL", "memory://"),
     )
 except ImportError:
@@ -1640,6 +1640,7 @@ def start():
 
 
 @app.route('/api/session/calibrate', methods=['POST'])
+@limiter.exempt
 def calibrate_route():
     """Calibrate user baseline resting head pose and eye openness."""
     d = request.json or {}
@@ -1650,6 +1651,7 @@ def calibrate_route():
 
 
 @app.route('/api/debug/telemetry/<sid>')
+@limiter.exempt
 def debug_telemetry_route(sid):
     """Returns real-time raw vision, landmark, and cognitive telemetry for debug mode."""
     s = sessions.get(sid, {})
@@ -1657,6 +1659,7 @@ def debug_telemetry_route(sid):
 
 
 @app.route('/api/analyze', methods=['POST'])
+@limiter.exempt
 def analyze():
     """
     Multimodal Cognitive Analysis Endpoint — called every ~2 seconds.
@@ -3246,6 +3249,7 @@ def predict_performance(user_id, session_data=None):
 # =============================================================================
 
 @app.route('/api/hand-gesture', methods=['POST'])
+@limiter.exempt
 def hand_gesture_api():
     """
     Receive hand gesture detected by MediaPipe Hands on the frontend.
@@ -3423,6 +3427,7 @@ def learning_path_page():
 # =============================================================================
 
 @app.route('/api/voice-stress', methods=['POST'])
+@limiter.exempt
 def voice_stress_api():
     """
     Receive voice stress features from Web Audio API on the frontend.
