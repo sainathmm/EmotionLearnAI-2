@@ -379,15 +379,17 @@ def detect_faces_and_landmarks(img: np.ndarray) -> Dict[str, Any]:
 
 # ── Face Alignment & Normalization ──────────────────────────────────────────
 
-def align_face(img: np.ndarray, primary_face: Dict[str, Any], crop_margin: float = 0.10) -> Tuple[np.ndarray, Dict[str, Any]]:
+def align_face(img: np.ndarray, primary_face: Dict[str, Any], crop_margin: float = 0.04) -> Tuple[np.ndarray, Dict[str, Any]]:
     """
     Performs affine rotation so that both eyes are aligned horizontally,
     then crops the centered face region with a calibrated margin.
+    Guarantees strict 1:1 aspect ratio by padding image borders when near edges,
+    preventing face squashing/distortion when resized to (64, 64).
 
     Args:
         img: BGR image.
         primary_face: Dictionary containing 'bbox', 'left_eye_center', 'right_eye_center'.
-        crop_margin: Fraction of bounding box size added as margin around the crop (default 0.10).
+        crop_margin: Margin around the bounding box (default 0.04, calibrated to FERPlus/FER2013 framing).
 
     Returns:
         Tuple of (aligned_face_img, transform_metadata)
@@ -412,12 +414,12 @@ def align_face(img: np.ndarray, primary_face: Dict[str, Any], crop_margin: float
 
     # Center of crop: horizontally aligned with eyes, vertically slightly below eyes
     cx = int(eyes_center[0])
-    cy = int(eyes_center[1] + fh * 0.12)
-    half_size = int(max(fw, fh) * (0.5 + crop_margin))
+    cy = int(eyes_center[1] + fh * 0.10)
+    half_size = int(max(fw, fh) * (0.50 + crop_margin))
 
     # Determine whether rotation is beneficial:
     # 1. Skip rotation if tilt is negligible (< 1.5 deg) to prevent bilinear interpolation blur
-    # 2. Skip rotation if tilt is extreme (> 35 deg) to avoid unnatural distortion / degenerate crops
+    # 2. Skip rotation if tilt is extreme (> 35 deg) to avoid unnatural distortion
     perform_rotation = 1.5 <= abs(angle_deg) <= 35.0
 
     if perform_rotation:
@@ -426,15 +428,24 @@ def align_face(img: np.ndarray, primary_face: Dict[str, Any], crop_margin: float
     else:
         source_img = img
 
-    x1 = max(0, cx - half_size)
-    y1 = max(0, cy - half_size)
-    x2 = min(w, cx + half_size)
-    y2 = min(h, cy + half_size)
+    # Symmetrical boundary padding to guarantee 1:1 square aspect ratio without distortion
+    pad_left = max(0, -(cx - half_size))
+    pad_top = max(0, -(cy - half_size))
+    pad_right = max(0, (cx + half_size) - w)
+    pad_bottom = max(0, (cy + half_size) - h)
 
-    if x2 <= x1 or y2 <= y1:
-        # Fallback to direct bbox crop
-        x1, y1 = max(0, fx), max(0, fy)
-        x2, y2 = min(w, fx + fw), min(h, fy + fh)
+    if pad_left > 0 or pad_top > 0 or pad_right > 0 or pad_bottom > 0:
+        source_img = cv2.copyMakeBorder(
+            source_img, pad_top, pad_bottom, pad_left, pad_right,
+            borderType=cv2.BORDER_REPLICATE
+        )
+        cx += pad_left
+        cy += pad_top
+
+    x1 = cx - half_size
+    y1 = cy - half_size
+    x2 = cx + half_size
+    y2 = cy + half_size
 
     face_crop = source_img[y1:y2, x1:x2]
     if face_crop.size == 0:
@@ -456,19 +467,18 @@ def preprocess_emotion_face(
 ) -> np.ndarray:
     """
     Standardized preprocessing for the ONNX Emotion-FERPlus model.
-    GUARANTEED to be identical across production inference, unit tests, and training.
-
-    Steps:
-      1. Safe validation & channel normalization to Grayscale.
-      2. Adaptive CLAHE histogram equalization (mild contrast enhancement).
-      3. Resize to target dimensions (default 64x64) via AREA (downsample) or CUBIC (upsample).
-      4. Convert to float32 values in range [0.0, 255.0] (matching ONNX Minus340 internal mean subtraction).
-      5. Reshape to NCHW format: (1, 1, H, W).
+    GUARANTEED to match model training requirements:
+      1. Single-channel grayscale conversion.
+      2. Adaptive contrast enhancement: applies CLAHE only when image contrast
+         is compressed or illumination is extreme, avoiding artificial shadow artifacts.
+      3. Anti-aliased area resize to (64, 64) for downsampling, cubic for upsampling.
+      4. Single-precision float32 in raw pixel range [0.0, 255.0] (matching ONNX internal mean subtraction).
+      5. Reshaped to NCHW tensor layout: (1, 1, 64, 64).
 
     Args:
         face_img: BGR, BGRA, or Grayscale face crop.
         target_size: (width, height), default (64, 64).
-        enhance_lighting: Apply mild CLAHE if True.
+        enhance_lighting: Apply adaptive CLAHE if True.
 
     Returns:
         np.ndarray of shape (1, 1, 64, 64), dtype np.float32.
@@ -493,20 +503,25 @@ def preprocess_emotion_face(
     if gray.dtype != np.uint8:
         gray = np.clip(gray, 0, 255).astype(np.uint8)
 
-    # Lighting enhancement (gentle CLAHE)
+    # Adaptive lighting enhancement:
+    # Only apply CLAHE when dynamic range is compressed or image is underexposed / overexposed.
+    # On clean, well-lit images, raw grayscale preserves natural face gradients.
     if enhance_lighting:
-        try:
-            clahe = cv2.createCLAHE(clipLimit=1.5, tileGridSize=(8, 8))
-            gray = clahe.apply(gray)
-        except Exception:
-            pass
+        std_val = float(np.std(gray))
+        mean_val = float(np.mean(gray))
+        if std_val < 38.0 or mean_val < 60.0 or mean_val > 195.0:
+            try:
+                clahe = cv2.createCLAHE(clipLimit=1.2, tileGridSize=(8, 8))
+                gray = clahe.apply(gray)
+            except Exception:
+                pass
 
     # Resize using area interpolation for downsampling (anti-aliased) or cubic for upsampling
     h, w = gray.shape[:2]
     interp = cv2.INTER_AREA if (w >= target_size[0] and h >= target_size[1]) else cv2.INTER_CUBIC
     resized = cv2.resize(gray, target_size, interpolation=interp).astype(np.float32)
 
-    # Model input format: [0.0, 255.0] float32 NCHW blob
+    # Model input format: [0.0, 255.0] float32 NCHW blob (Input3)
     blob = resized.reshape(1, 1, target_size[1], target_size[0])
     return blob
 

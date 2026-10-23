@@ -122,9 +122,10 @@ def test_confidence_and_thresholding():
     _, conf, _, is_unc = tracker.add_prediction("neutral", 0.125, low_dist, is_uncertain=True)
     check("Low confidence output flags is_uncertain=True", is_unc is True)
 
-    # High confidence distribution
+    # High confidence distribution on clean tracker
+    tracker_high = TemporalEmotionTracker(window_size=5)
     high_dist = {'happy': 0.85, 'neutral': 0.05, 'sad': 0.02, 'angry': 0.02, 'fear': 0.02, 'surprise': 0.02, 'disgust': 0.02}
-    _, conf_high, _, is_unc_high = tracker.add_prediction("happy", 0.85, high_dist, is_uncertain=False)
+    _, conf_high, _, is_unc_high = tracker_high.add_prediction("happy", 0.85, high_dist, is_uncertain=False)
     check("High confidence output flags is_uncertain=False", is_unc_high is False and conf_high >= 0.40)
 
     # Restore threshold
@@ -132,18 +133,23 @@ def test_confidence_and_thresholding():
 
 
 def test_temporal_smoothing_and_decay():
-    print("\n--- 4. Temporal Smoothing & Stale State Decay ---")
+    print("\n--- 4. Temporal Smoothing & Face Jump / Stale State Decay ---")
     tracker = TemporalEmotionTracker(window_size=6)
     happy_dist = {'happy': 0.80, 'neutral': 0.10, 'sad': 0.02, 'angry': 0.02, 'fear': 0.02, 'surprise': 0.02, 'disgust': 0.02}
 
-    # Feed consistent happy predictions
+    # Feed consistent happy predictions with stable bbox
     for _ in range(5):
-        tracker.add_prediction("happy", 0.80, happy_dist, is_uncertain=False)
+        tracker.add_prediction("happy", 0.80, happy_dist, is_uncertain=False, bbox=(100, 100, 80, 80))
 
-    emo, conf, stab, _ = tracker.add_prediction("happy", 0.80, happy_dist, is_uncertain=False)
+    emo, conf, stab, _ = tracker.add_prediction("happy", 0.80, happy_dist, is_uncertain=False, bbox=(102, 101, 80, 80))
     check("Consistent predictions produce high stability score (>=0.60)",
           stab >= 0.60, f"Got stability {stab}")
     check("Smoothed emotion matches dominant stream", emo == "happy")
+
+    # Simulate face displacement/switch (center moves from (142, 141) to (440, 440))
+    tracker.add_prediction("sad", 0.70, {'sad': 0.70, 'neutral': 0.30}, is_uncertain=False, bbox=(400, 400, 80, 80))
+    check("Face jump / displacement resets history buffer to prevent ghosting",
+          len(tracker.history) == 1)
 
     # Simulate face disappearance
     tracker.last_face_time = time.time() - 2.5
@@ -162,6 +168,7 @@ def test_infer_emotion_contracts():
     check("Empty frame returns confidence=0.0", res_none['confidence'] == 0.0)
     check("Empty frame returns is_uncertain=True", res_none['is_uncertain'] is True)
     check("Empty frame returns emotion='neutral'", res_none['emotion'] == 'neutral')
+    check("Empty frame returns predicted_expression='No Face Detected'", res_none['predicted_expression'] == 'No Face Detected')
     check("Empty frame returns stability_label='unstable'", res_none['stability_label'] == 'unstable')
 
     # 2. Corrupt base64 string
@@ -175,6 +182,7 @@ def test_infer_emotion_contracts():
         res_face = infer_emotion(img=real_img, session_id="test_contract")
         check("Real face image detects face", res_face['face_detected'] is True)
         check("Real face returns non-zero confidence", res_face['confidence'] > 0.0)
+        check("Real face returns predicted_expression", 'predicted_expression' in res_face and len(res_face['predicted_expression']) > 0)
         check("Real face returns all 7 pedagogical emotions in distribution",
               len(res_face['all']) == 7 and all(e in res_face['all'] for e in PEDAGOGICAL_EMOTIONS))
         check("Real face returns all 8 raw ONNX emotions in raw_all",

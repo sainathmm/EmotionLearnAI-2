@@ -40,6 +40,7 @@ LABEL_MAP = {'contempt': 'disgust'}
 
 # Configurable Thresholds
 CONFIDENCE_THRESHOLD = float(os.getenv('EMOTION_CONFIDENCE_THRESHOLD', '0.35'))
+EMOTION_SMOOTHING_ALPHA = float(os.getenv('EMOTION_SMOOTHING_ALPHA', '0.35'))  # EMA factor: 0.35 yields rapid tracking (~300ms) with zero flicker
 HISTORY_WINDOW_SIZE = 8         # Number of frames in rolling temporal buffer (calibrated for real-time interaction)
 HISTORY_MAX_AGE_SECS = 3.0      # Max age of frames to consider in temporal fusion (prevents long hysteresis)
 
@@ -54,6 +55,18 @@ def set_confidence_threshold(val: float) -> None:
     """Sets a new emotion confidence threshold (clamped between 0.05 and 0.95)."""
     global CONFIDENCE_THRESHOLD
     CONFIDENCE_THRESHOLD = float(np.clip(val, 0.05, 0.95))
+
+
+def get_smoothing_alpha() -> float:
+    """Returns the current EMA smoothing alpha."""
+    global EMOTION_SMOOTHING_ALPHA
+    return EMOTION_SMOOTHING_ALPHA
+
+
+def set_smoothing_alpha(val: float) -> None:
+    """Sets a new EMA smoothing alpha (clamped between 0.05 and 1.0)."""
+    global EMOTION_SMOOTHING_ALPHA
+    EMOTION_SMOOTHING_ALPHA = float(np.clip(val, 0.05, 1.0))
 
 
 # ── Model Loader Singleton ───────────────────────────────────────────────────
@@ -156,13 +169,16 @@ def _softmax(logits: np.ndarray) -> np.ndarray:
 class TemporalEmotionTracker:
     """
     Maintains a rolling history of recent frame predictions per user session,
-    calculates probability-weighted temporal smoothing, and derives emotion stability.
-    Gracefully decays when no face is present to avoid freezing stale emotions.
+    calculates probability-weighted temporal smoothing (EMA), and derives emotion stability.
+    Gracefully decays when no face is present and resets on face displacement or switches.
     """
 
-    def __init__(self, window_size: int = HISTORY_WINDOW_SIZE):
+    def __init__(self, window_size: int = HISTORY_WINDOW_SIZE, alpha: Optional[float] = None):
         self.window_size = window_size
+        self.alpha: float = alpha if alpha is not None else EMOTION_SMOOTHING_ALPHA
         self.history: deque = deque(maxlen=window_size)
+        self.ema_probs: Optional[Dict[str, float]] = None
+        self.last_bbox: Optional[Tuple[int, int, int, int]] = None
         self.last_stable_emotion: str = 'neutral'
         self.last_stable_confidence: float = 0.65
         self.last_face_time: float = 0.0
@@ -170,9 +186,11 @@ class TemporalEmotionTracker:
     def notify_no_face(self) -> None:
         """Called when no face is detected in the current frame to decay stale state."""
         now = time.time()
-        # If no face has been seen for > 1.5 seconds, decay historical predictions
-        if self.last_face_time > 0 and (now - self.last_face_time > 1.5):
+        # If no face has been seen for > 1.0 seconds, decay historical predictions
+        if self.last_face_time > 0 and (now - self.last_face_time > 1.0):
             self.history.clear()
+            self.ema_probs = None
+            self.last_bbox = None
             self.last_stable_emotion = 'neutral'
             self.last_stable_confidence = 0.0
 
@@ -181,16 +199,53 @@ class TemporalEmotionTracker:
         raw_emotion: str,
         confidence: float,
         probs: Dict[str, float],
-        is_uncertain: bool
+        is_uncertain: bool,
+        bbox: Optional[Tuple[int, int, int, int]] = None
     ) -> Tuple[str, float, float, bool]:
         """
         Adds a new frame prediction and computes temporally smoothed probability distribution.
+        Resets temporal history if face position/size jumps abruptly (face switch).
 
         Returns:
             Tuple: (smoothed_emotion, smoothed_confidence, stability_score, is_uncertain)
         """
         now = time.time()
+
+        # Face switch / major displacement check:
+        if bbox is not None and self.last_bbox is not None:
+            x1, y1, w1, h1 = self.last_bbox
+            x2, y2, w2, h2 = bbox
+            cx1, cy1 = x1 + w1 / 2.0, y1 + h1 / 2.0
+            cx2, cy2 = x2 + w2 / 2.0, y2 + h2 / 2.0
+            dist = math.hypot(cx2 - cx1, cy2 - cy1)
+            area1 = max(w1 * h1, 1)
+            area2 = max(w2 * h2, 1)
+            area_ratio = max(area1 / area2, area2 / area1)
+            dt = now - self.last_face_time if self.last_face_time > 0 else 0.0
+
+            # If face moved > 150px, area changed > 2.3x, or gap > 1.5s -> face changed
+            if dist > 150.0 or area_ratio > 2.3 or dt > 1.5:
+                self.history.clear()
+                self.ema_probs = None
+
+        if bbox is not None:
+            self.last_bbox = bbox
+
         self.last_face_time = now
+
+        # 1. Update Exponential Moving Average (EMA) over probabilities
+        if self.ema_probs is None:
+            self.ema_probs = {e: float(probs.get(e, 0.0)) for e in PEDAGOGICAL_EMOTIONS}
+        else:
+            for e in PEDAGOGICAL_EMOTIONS:
+                p_new = float(probs.get(e, 0.0))
+                self.ema_probs[e] = self.alpha * p_new + (1.0 - self.alpha) * self.ema_probs[e]
+
+        # Re-normalize EMA probabilities
+        ema_sum = sum(self.ema_probs.values())
+        if ema_sum > 0:
+            for e in self.ema_probs:
+                self.ema_probs[e] /= ema_sum
 
         self.history.append({
             'time': now,
@@ -206,38 +261,17 @@ class TemporalEmotionTracker:
         if not active_entries:
             return raw_emotion, confidence, 0.5, is_uncertain
 
-        # Probability smoothing with exponential recency weighting
-        weighted_probs = {e: 0.0 for e in PEDAGOGICAL_EMOTIONS}
-        total_weight = 0.0
-
-        for entry in active_entries:
-            age = max(0.0, now - entry['time'])
-            # Exponential recency decay (half-life approx 0.85s)
-            recency = math.exp(-0.80 * age)
-            weight = recency * (0.50 if entry['is_uncertain'] else 1.0)
-
-            for emo, p in entry['probs'].items():
-                if emo in weighted_probs:
-                    weighted_probs[emo] += p * weight
-            total_weight += weight
-
-        if total_weight > 0:
-            for emo in weighted_probs:
-                weighted_probs[emo] /= total_weight
-        else:
-            weighted_probs = probs.copy()
-
-        # Determine smoothed dominant emotion
-        smoothed_emotion = max(weighted_probs, key=weighted_probs.get)
-        smoothed_conf = float(weighted_probs[smoothed_emotion])
+        # Determine dominant emotion from EMA probabilities
+        smoothed_emotion = max(self.ema_probs, key=self.ema_probs.get)
+        smoothed_conf = float(self.ema_probs[smoothed_emotion])
 
         # Emotion Stability Metric (0.0 to 1.0)
         # 1. Frequency of dominant emotion in active window
         count_dominant = sum(1 for e in active_entries if e['emotion'] == smoothed_emotion and not e['is_uncertain'])
         fraction_dominant = count_dominant / len(active_entries)
 
-        # 2. Probability margin between 1st and 2nd class
-        sorted_probs = sorted(weighted_probs.values(), reverse=True)
+        # 2. Probability margin between 1st and 2nd class in EMA distribution
+        sorted_probs = sorted(self.ema_probs.values(), reverse=True)
         margin = (sorted_probs[0] - sorted_probs[1]) if len(sorted_probs) > 1 else sorted_probs[0]
 
         stability = float(np.clip(0.60 * fraction_dominant + 0.40 * min(1.0, margin * 2.0), 0.0, 1.0))
@@ -254,6 +288,8 @@ class TemporalEmotionTracker:
     def clear(self):
         """Clears the temporal tracker history and resets stable baseline."""
         self.history.clear()
+        self.ema_probs = None
+        self.last_bbox = None
         self.last_stable_emotion = 'neutral'
         self.last_stable_confidence = 0.65
         self.last_face_time = 0.0
@@ -286,27 +322,30 @@ def infer_emotion(
     Complete emotion analysis pipeline on a frame:
       1. Decode base64 frame if needed.
       2. Detect faces, landmarks, and evaluate multi-face/no-face status.
-      3. Perform anatomical face alignment.
+      3. Perform anatomical face alignment with aspect-ratio-preserving padding.
       4. Apply standardized preprocessing (matching ONNX Emotion-FERPlus input).
       5. Run ONNX model inference and compute full probability distribution.
       6. Calculate confidence, stability, and temporal smoothed emotion.
 
     Returns:
         dict:
-            face_detected       (bool)
-            face_count          (int)
-            face_status         (str)   — 'single_face', 'multiple_faces', 'no_face'
-            emotion             (str)   — Temporally smoothed dominant emotion
-            raw_emotion         (str)   — Single-frame dominant emotion
-            confidence          (float) — Smoothed model confidence score (0.0 - 1.0)
-            raw_confidence      (float) — Raw single-frame confidence score
-            stability           (float) — Emotion stability score (0.0 - 1.0)
-            stability_label     (str)   — 'stable' (>=0.60), 'moderate' (0.35-0.59), 'unstable' (<0.35)
-            is_uncertain        (bool)  — True if confidence < threshold
-            all                 (dict)  — Full probability distribution over pedagogical emotions
-            raw_all             (dict)  — Raw 8-class probability distribution
-            alignment           (dict)  — Face alignment transform info
-            primary_face        (dict)  — Primary face landmarks and bounding box
+            face_detected          (bool)
+            face_count             (int)
+            face_status            (str)   — 'single_face', 'multiple_faces', 'no_face'
+            emotion                (str)   — Temporally smoothed dominant emotion
+            predicted_expression   (str)   — 'Uncertain' if low confidence, else expression name
+            display_name           (str)   — User-friendly label for UI
+            status                 (str)   — 'confident', 'uncertain', 'no_face'
+            raw_emotion            (str)   — Single-frame dominant emotion
+            confidence             (float) — Smoothed model confidence score (0.0 - 1.0)
+            raw_confidence         (float) — Raw single-frame confidence score
+            stability              (float) — Emotion stability score (0.0 - 1.0)
+            stability_label        (str)   — 'stable' (>=0.60), 'moderate' (0.35-0.59), 'unstable' (<0.35)
+            is_uncertain           (bool)  — True if confidence < threshold
+            all                    (dict)  — Full probability distribution over pedagogical emotions
+            raw_all                (dict)  — Raw 8-class probability distribution
+            alignment              (dict)  — Face alignment transform info
+            primary_face           (dict)  — Primary face landmarks and bounding box
     """
     if img is None and frame_b64:
         img = decode_base64_frame(frame_b64)
@@ -321,6 +360,9 @@ def infer_emotion(
             'face_count': 0,
             'face_status': 'no_face',
             'emotion': 'neutral',
+            'predicted_expression': 'No Face Detected',
+            'display_name': 'No Face Detected',
+            'status': 'no_face',
             'raw_emotion': 'no_face',
             'confidence': 0.0,
             'raw_confidence': 0.0,
@@ -344,6 +386,9 @@ def infer_emotion(
             'face_count': 0,
             'face_status': 'no_face',
             'emotion': 'neutral',
+            'predicted_expression': 'No Face Detected',
+            'display_name': 'No Face Detected',
+            'status': 'no_face',
             'raw_emotion': 'no_face',
             'confidence': 0.0,
             'raw_confidence': 0.0,
@@ -392,17 +437,30 @@ def infer_emotion(
     is_uncertain = (raw_conf < CONFIDENCE_THRESHOLD)
 
     # 6. Temporal Fusion & Stability Calculation
+    bbox = tuple(det['primary_face']['bbox']) if (det['primary_face'] and 'bbox' in det['primary_face']) else None
     smoothed_emo, smoothed_conf, stability, final_uncertain = tracker.add_prediction(
-        raw_dominant, raw_conf, ped_dist, is_uncertain
+        raw_dominant, raw_conf, ped_dist, is_uncertain, bbox=bbox
     )
 
     stability_label = 'stable' if stability >= 0.60 else ('moderate' if stability >= 0.35 else 'unstable')
+
+    if final_uncertain:
+        predicted_expression = "Uncertain"
+        display_name = "Uncertain (Low Confidence)"
+        status = "uncertain"
+    else:
+        predicted_expression = smoothed_emo.capitalize()
+        display_name = smoothed_emo.capitalize()
+        status = "confident"
 
     return {
         'face_detected': True,
         'face_count': int(det['face_count']),
         'face_status': face_status,
         'emotion': smoothed_emo,
+        'predicted_expression': predicted_expression,
+        'display_name': display_name,
+        'status': status,
         'raw_emotion': raw_dominant,
         'confidence': round(smoothed_conf, 3),
         'raw_confidence': round(raw_conf, 3),

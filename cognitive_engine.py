@@ -178,15 +178,23 @@ def evaluate_cognitive_state(
             'desc': meta['desc']
         }
 
+    # Student optional feedback
+    feedback = str(perf.get('student_feedback') or perf.get('feedback') or '').strip().lower()
+
     # ── 3. High Stress / Anxiety ─────────────────────────────────────────────
-    if (blink_rate > 36.0 or emotion == 'fear') and cons_wrong >= 1:
+    # Requires repeated mistakes (cons_wrong >= 2) or explicit feedback, and confirmed confident expression
+    has_fear_cue = (emotion == 'fear' and not is_emo_uncertain and emo_conf >= 0.50)
+    if feedback in ['anxious', 'stressed'] or ((blink_rate > 38.0 or has_fear_cue) and cons_wrong >= 2):
         state = 'anxious'
-        confidence = 0.80
-        if blink_rate > 36.0:
-            reasons.append(f'Elevated blink frequency ({blink_rate} blinks/min indicates cognitive tension).')
-        if emotion == 'fear':
-            reasons.append(f'Anxious / stressed facial expression (Confidence: {int(emo_conf*100)}%).')
-        reasons.append(f'Recent difficulty: {diff.title()} question missed.')
+        confidence = 0.82
+        if feedback in ['anxious', 'stressed']:
+            reasons.append(f'Student reported feeling {feedback}.')
+        if blink_rate > 38.0:
+            reasons.append(f'Elevated blink frequency ({blink_rate} blinks/min indicates tension).')
+        if has_fear_cue:
+            reasons.append(f'Tense facial expression detected (Confidence: {int(emo_conf*100)}%).')
+        if cons_wrong >= 2:
+            reasons.append(f'Repeated missed questions ({cons_wrong} in a row on {diff.title()}).')
         meta = COGNITIVE_STATE_METADATA[state]
         return {
             'state': state,
@@ -199,16 +207,20 @@ def evaluate_cognitive_state(
         }
 
     # ── 4. Overloaded / Strained Cognitive State ─────────────────────────────
-    # High response time + struggling performance OR strained expressions with high load
-    is_time_over = (time_taken > exp_time * 1.7) if time_taken > 0 else False
-    if (cons_wrong >= 2 or (recent_acc < 0.40 and total_q >= 2)) and (is_time_over or emotion in ['angry', 'fear', 'sad']):
+    # High response time + repeated mistakes OR explicit feedback (never on single mistake or slow response alone)
+    is_time_over = (time_taken > exp_time * 1.8) if time_taken > 0 else False
+    has_strain_cue = (emotion in ['angry', 'sad', 'fear'] and not is_emo_uncertain and emo_conf >= 0.55)
+    if feedback in ['overloaded', 'overwhelmed'] or ((cons_wrong >= 2 or (recent_acc < 0.35 and total_q >= 3)) and (is_time_over or has_strain_cue)):
         state = 'overloaded'
         confidence = 0.84
-        reasons.append(f'Recent quiz accuracy dropped to {int(recent_acc*100)}% ({cons_wrong} consecutive wrong).')
-        if is_time_over:
-            reasons.append(f'Response time ({time_taken:.1f}s) exceeded expected time ({exp_time:.0f}s).')
-        if emotion in ['angry', 'sad', 'fear']:
-            reasons.append(f'Strained facial expression detected ({emotion.title()}).')
+        if feedback in ['overloaded', 'overwhelmed']:
+            reasons.append(f'Student indicated high cognitive load ({feedback}).')
+        else:
+            reasons.append(f'Repeated mistakes: {cons_wrong} consecutive wrong (accuracy: {int(recent_acc*100)}%).')
+            if is_time_over:
+                reasons.append(f'Response time ({time_taken:.1f}s) significantly exceeded baseline ({exp_time:.0f}s).')
+            if has_strain_cue:
+                reasons.append(f'Strained facial expression detected ({emotion.title()}).')
         meta = COGNITIVE_STATE_METADATA[state]
         return {
             'state': state,
@@ -221,13 +233,16 @@ def evaluate_cognitive_state(
         }
 
     # ── 5. Conceptual Struggle (Needs Guidance) ──────────────────────────────
-    if (cons_wrong >= 2 or recent_acc < 0.45) and att_score >= 55:
+    if feedback in ['confused', 'struggling', 'need_help'] or ((cons_wrong >= 2 or recent_acc < 0.45) and att_score >= 55):
         state = 'struggling'
-        confidence = 0.82
-        reasons.append(f'Student is attentive ({att_score}/100) but struggling on {diff.title()} questions.')
-        reasons.append(f'Recent accuracy: {int(recent_acc*100)}%.')
-        if is_weak:
-            reasons.append('Practicing a flagged weak topic.')
+        confidence = 0.85
+        if feedback in ['confused', 'struggling', 'need_help']:
+            reasons.append(f'Student requested help/scaffolding ({feedback}).')
+        else:
+            reasons.append(f'Attentive ({att_score}/100) but encountering conceptual hurdle ({cons_wrong} wrong on {diff.title()}).')
+            reasons.append(f'Recent accuracy: {int(recent_acc*100)}%.')
+            if is_weak:
+                reasons.append('Practicing a flagged weak topic.')
         meta = COGNITIVE_STATE_METADATA[state]
         return {
             'state': state,
@@ -240,13 +255,17 @@ def evaluate_cognitive_state(
         }
 
     # ── 6. Under-Challenged / Boredom ────────────────────────────────────────
-    # High accuracy, fast answering on easy questions, but flat/neutral/sad face and moderate attention
+    # High accuracy and fast answering on easy questions (never triggered by neutral face or single quick answer)
     is_fast = (0 < time_taken < exp_time * 0.4) if time_taken > 0 else False
-    if (recent_acc >= 0.80 and diff == 'easy' and total_q >= 3 and is_fast) or (emotion == 'sad' and recent_acc >= 0.80 and att_score < 60):
+    has_bored_face = (emotion == 'sad' and not is_emo_uncertain and emo_conf >= 0.60 and att_score < 60)
+    if feedback in ['bored', 'too_easy'] or (recent_acc >= 0.85 and diff == 'easy' and total_q >= 4 and is_fast) or (has_bored_face and recent_acc >= 0.85):
         state = 'bored'
-        confidence = 0.78
-        reasons.append(f'High accuracy ({int(recent_acc*100)}%) on {diff.title()} questions with rapid solving.')
-        reasons.append('Student appears under-challenged and ready for harder material.')
+        confidence = 0.80
+        if feedback in ['bored', 'too_easy']:
+            reasons.append(f'Student feedback: content is {feedback}.')
+        else:
+            reasons.append(f'Consistently high mastery ({int(recent_acc*100)}%) on {diff.title()} questions with rapid solving.')
+            reasons.append('Material is mastered; student is ready for higher difficulty.')
         meta = COGNITIVE_STATE_METADATA[state]
         return {
             'state': state,

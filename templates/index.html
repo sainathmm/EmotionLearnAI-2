@@ -613,11 +613,15 @@ canvas:not(#snakeCanvas):not(#canvas):not(#handCanvas){display:none}
           <div class="emotion-name" id="emoName">Neutral</div>
           <div class="emotion-conf" id="emoConf">Confidence: --</div>
           <div class="stability-pill stable" id="emoStability" style="display:none">Stable</div>
+          <div class="uncertainty-pill" id="emoUncertain" style="display:none;background:rgba(255,187,51,0.2);color:#ffbb33;border:1px solid rgba(255,187,51,0.4);border-radius:12px;padding:2px 8px;font-size:10px;font-weight:700;margin-top:2px;">⚠️ Uncertain</div>
           <!-- Smoothed label shown when noise filtering is active -->
           <div class="emotion-smoothed" id="emoSmoothed" style="display:none">✦ smoothed</div>
         </div>
       </div>
       <div class="emotion-bars" id="emoBars"></div>
+      <div class="emotion-disclaimer" style="font-size:10.5px;color:#94a3b8;margin-top:8px;line-height:1.35;border-top:1px solid #2d3748;padding-top:6px;">
+        ℹ️ <em>Facial expressions are probabilistic visual cues, not definitive indicators of internal emotional states.</em>
+      </div>
     </div>
 
     <!-- ATTENTION & 3D HEAD POSE HUD -->
@@ -1042,23 +1046,58 @@ function updateUI(data){
   }
 
   // ── Emotion panel ──
-  document.getElementById('emoEmoji').textContent = EMOJI[e.emotion] || '😐';
-  document.getElementById('emoName').textContent = (e.emotion||'neutral').charAt(0).toUpperCase() + (e.emotion||'neutral').slice(1);
-  document.getElementById('emoConf').textContent = 'Confidence: ' + Math.round((e.confidence||0.7)*100) + '%';
-  document.getElementById('statFace').textContent = e.face_detected ? 'Yes ✓' : 'No';
+  const emoEmojiEl = document.getElementById('emoEmoji');
+  const emoNameEl = document.getElementById('emoName');
+  const emoConfEl = document.getElementById('emoConf');
+  const statFaceEl = document.getElementById('statFace');
+  const uncEl = document.getElementById('emoUncertain');
+
+  if (!e.face_detected) {
+    if(emoEmojiEl) emoEmojiEl.textContent = '👤';
+    if(emoNameEl) emoNameEl.textContent = 'No Face Detected';
+    if(emoConfEl) emoConfEl.textContent = 'Searching for face...';
+    if(statFaceEl) statFaceEl.textContent = 'No';
+    if(uncEl) {
+      uncEl.style.display = 'inline-block';
+      uncEl.textContent = '● No Face Detected';
+      uncEl.style.color = '#94a3b8';
+      uncEl.style.borderColor = 'rgba(148, 163, 184, 0.4)';
+      uncEl.style.background = 'rgba(148, 163, 184, 0.15)';
+    }
+  } else if (e.is_uncertain) {
+    if(emoEmojiEl) emoEmojiEl.textContent = '🤔';
+    if(emoNameEl) emoNameEl.textContent = e.display_name || 'Uncertain';
+    if(emoConfEl) emoConfEl.textContent = 'Confidence: ' + Math.round((e.confidence||0)*100) + '% (Low)';
+    if(statFaceEl) statFaceEl.textContent = 'Yes ✓';
+    if(uncEl) {
+      uncEl.style.display = 'inline-block';
+      uncEl.textContent = '⚠️ Uncertain';
+      uncEl.style.color = '#ffbb33';
+      uncEl.style.borderColor = 'rgba(255, 187, 51, 0.4)';
+      uncEl.style.background = 'rgba(255, 187, 51, 0.2)';
+    }
+  } else {
+    if(emoEmojiEl) emoEmojiEl.textContent = EMOJI[e.emotion] || '😐';
+    if(emoNameEl) emoNameEl.textContent = e.display_name || ((e.emotion||'neutral').charAt(0).toUpperCase() + (e.emotion||'neutral').slice(1));
+    if(emoConfEl) emoConfEl.textContent = 'Confidence: ' + Math.round((e.confidence||0.7)*100) + '%';
+    if(statFaceEl) statFaceEl.textContent = 'Yes ✓';
+    if(uncEl) { uncEl.style.display = 'none'; }
+  }
 
   // Stability pill
   const stabEl = document.getElementById('emoStability');
-  if(stabEl && e.stability_label){
+  if(stabEl && e.stability_label && e.face_detected){
     stabEl.style.display = 'inline-block';
     stabEl.className = 'stability-pill ' + e.stability_label;
     stabEl.textContent = e.stability_label.toUpperCase() + ' (' + Math.round((e.stability||0)*100) + '%)';
+  } else if(stabEl) {
+    stabEl.style.display = 'none';
   }
 
   // Smoothed tag
   const smoothedEl = document.getElementById('emoSmoothed');
   if(smoothedEl){
-    if(e.raw_emotion && e.raw_emotion !== e.emotion){
+    if(e.face_detected && e.raw_emotion && e.raw_emotion !== e.emotion && !e.is_uncertain){
       smoothedEl.style.display = 'block';
       smoothedEl.textContent = '✦ smoothed (raw: ' + e.raw_emotion + ')';
     } else {
