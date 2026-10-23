@@ -19,6 +19,7 @@ import cv2, numpy as np, base64, time, random, sqlite3, os, secrets, re, json, m
 from datetime import datetime, date, timedelta
 from collections import deque, Counter
 from functools import wraps
+from typing import Any, Optional, Dict, List, Tuple
 
 # ── Phase 3: Load .env file before anything else ──────────────────────────────
 from dotenv import load_dotenv
