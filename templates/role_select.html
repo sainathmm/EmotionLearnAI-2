@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EmotionLearnAI — Select Your Role</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Inter','Segoe UI',sans-serif}
+body{background:#0f0f1a;color:#fff;min-height:100vh;display:flex;flex-direction:column}
+
+.header{background:linear-gradient(135deg,#1a1a2e,#16213e);padding:15px 30px;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #00C851}
+.logo{font-size:24px;font-weight:700;color:#00C851}
+.logo span{color:#fff}
+.pb-logout{padding:6px 14px;background:transparent;border:1px solid #333;border-radius:8px;color:#666;font-size:13px;cursor:pointer;text-decoration:none;transition:all 0.2s}
+.pb-logout:hover{border-color:#FF4444;color:#FF4444}
+
+.hero{text-align:center;padding:50px 20px 30px}
+.hero h1{font-size:36px;font-weight:800;margin-bottom:12px}
+.hero h1 span{color:#00C851}
+.hero p{font-size:16px;color:#aaa;max-width:600px;margin:0 auto;line-height:1.7}
+
+.roles-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;max-width:1100px;margin:0 auto;padding:20px 30px 50px}
+
+.role-card{background:#1a1a2e;border:2px solid #2a2a3e;border-radius:16px;padding:28px;cursor:pointer;transition:all 0.3s;text-decoration:none;color:#fff;display:flex;flex-direction:column;gap:14px;position:relative;overflow:hidden}
+.role-card::before{content:'';position:absolute;inset:0;opacity:0;transition:opacity 0.3s;border-radius:14px}
+.role-card:hover{transform:translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,0.5)}
+
+.role-card.student{border-color:#00C85133}
+.role-card.student::before{background:linear-gradient(135deg,#00C85108,#00C85103)}
+.role-card.student:hover{border-color:#00C851;box-shadow:0 12px 40px rgba(0,200,81,0.2)}
+.role-card.student:hover::before{opacity:1}
+
+.role-card.candidate{border-color:#0099CC33}
+.role-card.candidate::before{background:linear-gradient(135deg,#0099CC08,#0099CC03)}
+.role-card.candidate:hover{border-color:#0099CC;box-shadow:0 12px 40px rgba(0,153,204,0.2)}
+.role-card.candidate:hover::before{opacity:1}
+
+.role-card.employee{border-color:#FF880033}
+.role-card.employee::before{background:linear-gradient(135deg,#FF880008,#FF880003)}
+.role-card.employee:hover{border-color:#FF8800;box-shadow:0 12px 40px rgba(255,136,0,0.2)}
+.role-card.employee:hover::before{opacity:1}
+
+.role-card.teacher{border-color:#AA00FF33}
+.role-card.teacher::before{background:linear-gradient(135deg,#AA00FF08,#AA00FF03)}
+.role-card.teacher:hover{border-color:#AA00FF;box-shadow:0 12px 40px rgba(170,0,255,0.2)}
+.role-card.teacher:hover::before{opacity:1}
+
+.role-card.recruiter{border-color:#FFBB3333}
+.role-card.recruiter::before{background:linear-gradient(135deg,#FFBB3308,#FFBB3303)}
+.role-card.recruiter:hover{border-color:#FFBB33;box-shadow:0 12px 40px rgba(255,187,51,0.2)}
+.role-card.recruiter:hover::before{opacity:1}
+
+.role-icon{font-size:44px;line-height:1}
+.role-title{font-size:20px;font-weight:700}
+.role-subtitle{font-size:13px;font-weight:600;opacity:0.7;text-transform:uppercase;letter-spacing:0.5px}
+.role-desc{font-size:13px;color:#aaa;line-height:1.6}
+.role-features{display:flex;flex-direction:column;gap:6px;margin-top:4px}
+.role-feature{font-size:12px;color:#888;display:flex;align-items:center;gap:6px}
+.role-feature::before{content:'✓';color:#00C851;font-weight:700;flex-shrink:0}
+
+.role-card.student .role-title{color:#00C851}
+.role-card.candidate .role-title{color:#0099CC}
+.role-card.employee .role-title{color:#FF8800}
+.role-card.teacher .role-title{color:#AA00FF}
+.role-card.recruiter .role-title{color:#FFBB33}
+
+.role-badge{position:absolute;top:14px;right:14px;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px}
+.badge-existing{background:#00C85122;color:#00C851;border:1px solid #00C85144}
+.badge-new{background:#0099CC22;color:#0099CC;border:1px solid #0099CC44}
+
+.section-label{text-align:center;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#555;margin:10px 0 -10px;padding:0 30px;max-width:1100px;margin-left:auto;margin-right:auto}
+
+.ai-engine-note{background:#1a1a2e;border:1px solid #2a2a3e;border-radius:12px;padding:20px 28px;max-width:1100px;margin:0 auto 40px;display:flex;align-items:center;gap:16px}
+.ai-engine-note .icon{font-size:32px;flex-shrink:0}
+.ai-engine-note p{font-size:13px;color:#aaa;line-height:1.6}
+.ai-engine-note strong{color:#00C851}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">🧠 Emotion<span>LearnAI</span></div>
+  <div style="font-size:13px;color:#aaa">AI-Powered Assessment &amp; Personalized Development Platform</div>
+  {% if user %}
+  <div style="display:flex;align-items:center;gap:12px">
+    <span style="font-size:13px;color:#00C851;font-weight:600">👤 {{ user.username }}</span>
+    <a href="/logout" class="pb-logout">Logout</a>
+  </div>
+  {% endif %}
+</div>
+
+<div class="hero">
+  <h1>Welcome to <span>EmotionLearnAI</span></h1>
+  <p>One AI engine — multiple real-world applications. Select your role to get started with a personalized experience powered by real-time emotion, attention, and cognitive analysis.</p>
+</div>
+
+<div class="section-label">— Core Learning Platform —</div>
+<div class="roles-grid" style="padding-bottom:10px">
+
+  <a href="/" class="role-card student">
+    <div class="role-badge badge-existing">Existing</div>
+    <div class="role-icon">🎓</div>
+    <div>
+      <div class="role-subtitle">Learning</div>
+      <div class="role-title">Student Learning</div>
+    </div>
+    <div class="role-desc">Personalized adaptive learning with real-time emotion and cognitive state analysis. Subjects, quizzes, spaced repetition, and AI-generated questions.</div>
+    <div class="role-features">
+      <div class="role-feature">Webcam emotion &amp; attention analysis</div>
+      <div class="role-feature">Adaptive difficulty engine</div>
+      <div class="role-feature">Weak topic detection &amp; recommendations</div>
+      <div class="role-feature">XP, levels, streaks &amp; leaderboard</div>
+    </div>
+  </a>
+
+  <a href="/dashboard" class="role-card student">
+    <div class="role-badge badge-existing">Existing</div>
+    <div class="role-icon">📊</div>
+    <div>
+      <div class="role-subtitle">Analytics</div>
+      <div class="role-title">Student Dashboard</div>
+    </div>
+    <div class="role-desc">Track your learning progress, emotion history, difficulty progression, subject accuracy, and personalized recommendations.</div>
+    <div class="role-features">
+      <div class="role-feature">Accuracy over time charts</div>
+      <div class="role-feature">Emotion distribution analysis</div>
+      <div class="role-feature">Subject-wise performance</div>
+      <div class="role-feature">Spaced repetition schedule</div>
+    </div>
+  </a>
+
+  <a href="/teacher" class="role-card teacher">
+    <div class="role-badge badge-existing">Existing</div>
+    <div class="role-icon">👨‍🏫</div>
+    <div>
+      <div class="role-subtitle">Monitoring</div>
+      <div class="role-title">Teacher Dashboard</div>
+    </div>
+    <div class="role-desc">Live class monitoring with real-time student emotion, attention, cognitive state, and performance tracking across all students.</div>
+    <div class="role-features">
+      <div class="role-feature">Live student emotion monitoring</div>
+      <div class="role-feature">Cognitive state alerts</div>
+      <div class="role-feature">Send hints to struggling students</div>
+      <div class="role-feature">Class-wide engagement stats</div>
+    </div>
+  </a>
+
+</div>
+
+<div class="section-label">— New Multi-Domain Extensions —</div>
+<div class="roles-grid">
+
+  <a href="/interview" class="role-card candidate">
+    <div class="role-badge badge-new">New</div>
+    <div class="role-icon">💼</div>
+    <div>
+      <div class="role-subtitle">Assessment</div>
+      <div class="role-title">AI Interview Assessment</div>
+    </div>
+    <div class="role-desc">Practice HR, technical, and behavioral interviews. AI evaluates answer relevance, technical correctness, and communication quality.</div>
+    <div class="role-features">
+      <div class="role-feature">Job-role based question generation</div>
+      <div class="role-feature">Answer relevance &amp; quality scoring</div>
+      <div class="role-feature">Behavioral signal analysis (auxiliary)</div>
+      <div class="role-feature">Skill-gap report &amp; recommendations</div>
+    </div>
+  </a>
+
+  <a href="/skill-assessment" class="role-card candidate">
+    <div class="role-badge badge-new">New</div>
+    <div class="role-icon">🛠️</div>
+    <div>
+      <div class="role-subtitle">Technical</div>
+      <div class="role-title">Skill Assessment</div>
+    </div>
+    <div class="role-desc">Assess technical skills across DSA, DBMS, OS, Networks, Programming, Web Development, Cloud, and Cybersecurity.</div>
+    <div class="role-features">
+      <div class="role-feature">MCQ &amp; technical questions</div>
+      <div class="role-feature">Category-wise scoring</div>
+      <div class="role-feature">Skill strength &amp; gap analysis</div>
+      <div class="role-feature">Personalized study roadmap</div>
+    </div>
+  </a>
+
+  <a href="/employee-training" class="role-card employee">
+    <div class="role-badge badge-new">New</div>
+    <div class="role-icon">🏢</div>
+    <div>
+      <div class="role-subtitle">Training</div>
+      <div class="role-title">Employee Training</div>
+    </div>
+    <div class="role-desc">Complete company training programs with assessments. Track progress, identify weak areas, and get personalized development recommendations.</div>
+    <div class="role-features">
+      <div class="role-feature">Training program enrollment</div>
+      <div class="role-feature">Progress &amp; performance tracking</div>
+      <div class="role-feature">Attention &amp; engagement monitoring</div>
+      <div class="role-feature">Development recommendations</div>
+    </div>
+  </a>
+
+  <a href="/candidate-dashboard" class="role-card recruiter">
+    <div class="role-badge badge-new">New</div>
+    <div class="role-icon">🔍</div>
+    <div>
+      <div class="role-subtitle">Hiring</div>
+      <div class="role-title">Candidate Dashboard</div>
+    </div>
+    <div class="role-desc">View your interview results, technical scores, skill profile, identified gaps, and personalized interview preparation roadmap.</div>
+    <div class="role-features">
+      <div class="role-feature">Interview performance summary</div>
+      <div class="role-feature">Technical &amp; communication scores</div>
+      <div class="role-feature">Skill gap visualization</div>
+      <div class="role-feature">Interview prep recommendations</div>
+    </div>
+  </a>
+
+  <a href="/recruiter-dashboard" class="role-card recruiter">
+    <div class="role-badge badge-new">New</div>
+    <div class="role-icon">📋</div>
+    <div>
+      <div class="role-subtitle">Recruiter</div>
+      <div class="role-title">Recruiter Dashboard</div>
+    </div>
+    <div class="role-desc">Review all candidate assessment results, compare job-role skill matches, view score distributions, and generate hiring insights.</div>
+    <div class="role-features">
+      <div class="role-feature">Candidate list with scores</div>
+      <div class="role-feature">Score distribution charts</div>
+      <div class="role-feature">Job-role skill coverage</div>
+      <div class="role-feature">Candidate comparison (job-relevant only)</div>
+    </div>
+  </a>
+
+  <a href="/admin-dashboard" class="role-card teacher">
+    <div class="role-badge badge-new">New</div>
+    <div class="role-icon">⚙️</div>
+    <div>
+      <div class="role-subtitle">Admin / Trainer</div>
+      <div class="role-title">Admin Dashboard</div>
+    </div>
+    <div class="role-desc">Platform-wide overview — manage users, create training programs, monitor interviews and skill assessments, and view reports.</div>
+    <div class="role-features">
+      <div class="role-feature">User management &amp; stats</div>
+      <div class="role-feature">Create &amp; manage training programs</div>
+      <div class="role-feature">Interview &amp; assessment overview</div>
+      <div class="role-feature">Platform activity charts</div>
+    </div>
+  </a>
+
+</div>
+
+<div style="max-width:1100px;margin:0 auto;padding:0 30px 50px">
+  <div class="ai-engine-note">
+    <div class="icon">🤖</div>
+    <p>
+      <strong>One AI Engine — Multiple Real-World Applications.</strong>
+      All domains share the same underlying EmotionLearnAI engine: real-time facial emotion inference (ONNX), 3D head pose attention tracking, multimodal cognitive state analysis, and personalized recommendation system.
+      Emotion and attention signals are used as <strong>auxiliary behavioral indicators only</strong> — job-relevant assessment is always the primary evaluation factor.
+    </p>
+  </div>
+</div>
+
+</body>
+</html>

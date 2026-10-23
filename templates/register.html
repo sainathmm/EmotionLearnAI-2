@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register — EmotionLearnAI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: 'Inter', 'Segoe UI', sans-serif;
+      background: #0f0f1a;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background-image:
+        linear-gradient(rgba(0,200,81,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,200,81,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+
+    .auth-card {
+      background: #1a1a2e;
+      border: 1px solid #2a2a3e;
+      border-radius: 20px;
+      padding: 44px 40px;
+      width: 100%;
+      max-width: 440px;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+      animation: cardIn 0.4s ease;
+    }
+    @keyframes cardIn {
+      from { opacity:0; transform: translateY(20px); }
+      to   { opacity:1; transform: translateY(0); }
+    }
+
+    .auth-logo {
+      text-align: center;
+      font-size: 26px;
+      font-weight: 800;
+      color: #00C851;
+      letter-spacing: -0.5px;
+      margin-bottom: 4px;
+    }
+    .auth-logo span { color: #fff; }
+    .auth-subtitle {
+      text-align: center;
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 28px;
+    }
+
+    .flash-msg {
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 14px;
+    }
+    .flash-msg.error   { background:#FF444422; border:1px solid #FF4444aa; color:#FF8888; }
+    .flash-msg.success { background:#00C85122; border:1px solid #00C851aa; color:#00C851; }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      margin-bottom: 7px;
+    }
+    .form-group input {
+      width: 100%;
+      background: #0d1117;
+      border: 1.5px solid #2a2a3e;
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 14px;
+      color: #fff;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      font-family: inherit;
+    }
+    .form-group input:focus {
+      border-color: #00C851;
+      box-shadow: 0 0 0 3px rgba(0,200,81,0.12);
+    }
+    .form-group input::placeholder { color: #444; }
+
+    /* Password strength indicator */
+    .strength-bar {
+      height: 4px;
+      border-radius: 4px;
+      background: #2a2a3e;
+      margin-top: 8px;
+      overflow: hidden;
+    }
+    .strength-fill {
+      height: 100%;
+      border-radius: 4px;
+      width: 0%;
+      transition: width 0.3s, background 0.3s;
+    }
+    .strength-label {
+      font-size: 11px;
+      color: #666;
+      margin-top: 4px;
+    }
+
+    .hint-text {
+      font-size: 11px;
+      color: #555;
+      margin-top: 5px;
+    }
+
+    .btn-primary {
+      width: 100%;
+      padding: 13px;
+      background: linear-gradient(135deg, #00C851, #009933);
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 6px;
+      transition: all 0.2s;
+      font-family: inherit;
+      letter-spacing: 0.3px;
+    }
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #00dd5a, #00aa3d);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(0,200,81,0.35);
+    }
+    .btn-primary:active { transform: translateY(0); }
+
+    .perks {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 22px;
+      justify-content: center;
+    }
+    .perk {
+      font-size: 11px;
+      color: #00C851;
+      background: #00C85113;
+      border: 1px solid #00C85133;
+      border-radius: 20px;
+      padding: 4px 10px;
+    }
+
+    .auth-footer {
+      text-align: center;
+      margin-top: 22px;
+      font-size: 13px;
+      color: #555;
+    }
+    .auth-footer a {
+      color: #00C851;
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .auth-footer a:hover { text-decoration: underline; }
+
+    .divider {
+      display: flex; align-items: center; gap: 12px;
+      margin: 20px 0; color: #333; font-size: 12px;
+    }
+    .divider::before, .divider::after {
+      content:''; flex:1; height:1px; background:#2a2a3e;
+    }
+  </style>
+</head>
+<body>
+
+<div class="auth-card">
+
+  <div class="auth-logo">🧠 Emotion<span>LearnAI</span></div>
+  <div class="auth-subtitle">Create your free account and start learning</div>
+
+  <!-- Perks -->
+  <div class="perks">
+    <span class="perk">🔥 Daily Streaks</span>
+    <span class="perk">⭐ XP & Levels</span>
+    <span class="perk">📊 Analytics</span>
+    <span class="perk">🧠 AI Adaptation</span>
+  </div>
+
+  <!-- Flash messages -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="flash-msg {{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <!-- Register form -->
+  <form method="POST" action="/register" id="registerForm">
+
+    <div class="form-group">
+      <label for="username">Username</label>
+      <input type="text" id="username" name="username"
+             placeholder="3-20 characters, letters & digits"
+             autocomplete="username" required>
+      <div class="hint-text">Letters, digits and underscore only.</div>
+    </div>
+
+    <div class="form-group">
+      <label for="email">Email Address</label>
+      <input type="email" id="email" name="email"
+             placeholder="you@example.com"
+             autocomplete="email" required>
+    </div>
+
+    <div class="form-group">
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password"
+             placeholder="Minimum 6 characters"
+             autocomplete="new-password" required
+             oninput="checkStrength(this.value)">
+      <div class="strength-bar">
+        <div class="strength-fill" id="strengthFill"></div>
+      </div>
+      <div class="strength-label" id="strengthLabel">Enter a password</div>
+    </div>
+
+    <div class="form-group">
+      <label for="confirm_password">Confirm Password</label>
+      <input type="password" id="confirm_password" name="confirm_password"
+             placeholder="Re-enter your password"
+             autocomplete="new-password" required>
+    </div>
+
+    <button type="submit" class="btn-primary">Create Account</button>
+
+  </form>
+
+  <div class="divider">already have an account?</div>
+
+  <div class="auth-footer">
+    <a href="/login">Sign in instead</a>
+  </div>
+
+</div>
+
+<script>
+/*
+ * Client-side password strength indicator.
+ * Purely cosmetic — the server validates independently.
+ */
+function checkStrength(password) {
+  const fill  = document.getElementById('strengthFill');
+  const label = document.getElementById('strengthLabel');
+
+  let score = 0;
+  if (password.length >= 6)  score++;
+  if (password.length >= 10) score++;
+  if (/[A-Z]/.test(password)) score++;
+  if (/[0-9]/.test(password)) score++;
+  if (/[^A-Za-z0-9]/.test(password)) score++;
+
+  const levels = [
+    { pct: '0%',   color: '#333',   text: 'Enter a password' },
+    { pct: '25%',  color: '#FF4444', text: 'Weak' },
+    { pct: '50%',  color: '#FF8800', text: 'Fair' },
+    { pct: '75%',  color: '#FFBB33', text: 'Good' },
+    { pct: '100%', color: '#00C851', text: 'Strong' },
+  ];
+
+  const level = levels[Math.min(score, 4)];
+  fill.style.width      = level.pct;
+  fill.style.background = level.color;
+  label.textContent     = level.text;
+  label.style.color     = level.color;
+}
+</script>
+
+</body>
+</html>

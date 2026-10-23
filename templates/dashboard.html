@@ -1,0 +1,1439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EmotionLearnAI — Advanced Learning Analytics</title>
+  <meta name="description" content="Personal learning analytics — topic mastery, accuracy trends, response time metrics, spaced repetition retention, and explainable recommendations.">
+
+  <!-- Bootstrap 5 for layout -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <!-- Google Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    /* ──────────────────────────────────────────────
+       DESIGN TOKENS & BASE
+    ────────────────────────────────────────────── */
+    :root {
+      --bg:         #0f0f1a;
+      --bg2:        #1a1a2e;
+      --bg3:        #141428;
+      --border:     #2a2a3e;
+      --border-lit: #3d3d5c;
+      --green:      #00C851;
+      --blue:       #0099CC;
+      --cyan:       #00e5ff;
+      --orange:     #FF8800;
+      --red:        #FF4444;
+      --purple:     #AA00FF;
+      --yellow:     #FFBB33;
+      --text:       #ffffff;
+      --muted:      #8f8fa8;
+      --card-r:     14px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── HEADER ───────────────────────────────── */
+    .dash-header {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      border-bottom: 2px solid var(--blue);
+      padding: 14px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    }
+
+    .logo {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--green);
+      letter-spacing: -0.5px;
+    }
+    .logo span { color: #fff; }
+
+    .dash-subtitle {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .back-btn {
+      padding: 8px 16px;
+      background: transparent;
+      border: 1.5px solid var(--green);
+      border-radius: 8px;
+      color: var(--green);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .back-btn:hover {
+      background: var(--green);
+      color: #000;
+      transform: translateY(-1px);
+    }
+
+    /* ── MAIN BODY ─────────────────────────────── */
+    .dash-body {
+      padding: 24px 28px;
+      max-width: 1440px;
+      margin: 0 auto;
+    }
+
+    /* ── STAT CARDS ────────────────────────────── */
+    .stat-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--card-r);
+      padding: 20px 22px;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+      height: 100%;
+    }
+    .stat-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--border-lit);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 4px;
+      height: 100%;
+      border-radius: var(--card-r) 0 0 var(--card-r);
+    }
+    .stat-card.green::before  { background: var(--green); }
+    .stat-card.blue::before   { background: var(--blue); }
+    .stat-card.cyan::before   { background: var(--cyan); }
+    .stat-card.orange::before { background: var(--orange); }
+    .stat-card.purple::before { background: var(--purple); }
+
+    .stat-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 8px;
+    }
+    .stat-value {
+      font-size: 32px;
+      font-weight: 800;
+      line-height: 1.1;
+    }
+    .stat-card.green  .stat-value { color: var(--green); }
+    .stat-card.blue   .stat-value { color: var(--blue); }
+    .stat-card.cyan   .stat-value { color: var(--cyan); }
+    .stat-card.orange .stat-value { color: var(--orange); }
+    .stat-card.purple .stat-value { color: var(--purple); }
+
+    .stat-sub {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .stat-icon {
+      position: absolute;
+      right: 18px;
+      top: 16px;
+      font-size: 26px;
+      opacity: 0.22;
+    }
+
+    /* ── BADGES & STATUSES ─────────────────────── */
+    .badge-status {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+    .badge-mastered {
+      background: rgba(0, 200, 81, 0.15);
+      color: #00C851;
+      border: 1px solid rgba(0, 200, 81, 0.4);
+    }
+    .badge-proficient {
+      background: rgba(0, 153, 204, 0.15);
+      color: #0099CC;
+      border: 1px solid rgba(0, 153, 204, 0.4);
+    }
+    .badge-learning {
+      background: rgba(255, 136, 0, 0.15);
+      color: #FF8800;
+      border: 1px solid rgba(255, 136, 0, 0.4);
+    }
+    .badge-needs-revision {
+      background: rgba(255, 68, 68, 0.15);
+      color: #FF4444;
+      border: 1px solid rgba(255, 68, 68, 0.4);
+    }
+    .badge-insufficient {
+      background: rgba(142, 142, 160, 0.15);
+      color: #a0a0b8;
+      border: 1px solid rgba(142, 142, 160, 0.3);
+    }
+
+    .badge-pill-soft {
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .pill-green { background: #00C85122; color: #00C851; }
+    .pill-red { background: #FF444422; color: #FF4444; }
+    .pill-blue { background: #0099CC22; color: #0099CC; }
+    .pill-muted { background: #8888aa22; color: #8888aa; }
+
+    /* ── CHART & SECTION CARDS ─────────────────── */
+    .chart-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--card-r);
+      padding: 22px 24px;
+      height: 100%;
+      position: relative;
+    }
+    .chart-card h5 {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 4px;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .chart-card p.chart-desc {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+    .chart-wrap {
+      position: relative;
+      height: 240px;
+    }
+
+    /* ── DATE RANGE SELECTOR ───────────────────── */
+    .range-selector {
+      display: inline-flex;
+      background: var(--bg3);
+      padding: 3px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      gap: 3px;
+    }
+    .range-btn {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .range-btn:hover {
+      color: #fff;
+    }
+    .range-btn.active {
+      background: var(--blue);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(0, 153, 204, 0.4);
+    }
+
+    /* ── EXPLAINABLE RECOMMENDATIONS ───────────── */
+    .rec-container {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .rec-item {
+      background: linear-gradient(135deg, rgba(26,26,46,0.9) 0%, rgba(22,33,62,0.7) 100%);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--cyan);
+      border-radius: 10px;
+      padding: 14px 18px;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .rec-item:hover {
+      border-color: var(--cyan);
+      transform: translateX(2px);
+    }
+    .rec-item.priority-urgent { border-left-color: var(--red); }
+    .rec-item.priority-medium { border-left-color: var(--orange); }
+    .rec-item.priority-success { border-left-color: var(--green); }
+
+    .rec-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+    .rec-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .rec-message {
+      font-size: 13px;
+      color: #d8d8e6;
+      line-height: 1.5;
+    }
+    .rec-reason {
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--muted);
+      background: rgba(0,0,0,0.25);
+      border-radius: 6px;
+      padding: 6px 10px;
+      border-left: 2px solid var(--muted);
+    }
+    .rec-action-btn {
+      font-size: 11px;
+      font-weight: 700;
+      color: #000;
+      background: var(--cyan);
+      padding: 4px 12px;
+      border-radius: 6px;
+      text-decoration: none;
+      display: inline-block;
+      white-space: nowrap;
+      transition: background 0.2s;
+    }
+    .rec-action-btn:hover {
+      background: #33eaff;
+      color: #000;
+    }
+
+    /* ── TABLES ─────────────────────────────────── */
+    .custom-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 13px;
+    }
+    .custom-table th {
+      background: var(--bg3);
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .custom-table td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+      color: #e0e0ee;
+    }
+    .custom-table tr:hover td {
+      background: rgba(255,255,255,0.02);
+    }
+    .custom-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* Progress bar in table */
+    .metric-progress {
+      background: rgba(255,255,255,0.08);
+      border-radius: 6px;
+      height: 8px;
+      width: 100px;
+      overflow: hidden;
+      display: inline-block;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+    .metric-progress-fill {
+      height: 100%;
+      border-radius: 6px;
+      transition: width 0.4s ease;
+    }
+
+    /* ── SECTION TITLES ────────────────────────── */
+    .section-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin: 28px 0 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* ── LOADING STATE ─────────────────────────── */
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      flex-direction: column;
+      gap: 16px;
+      transition: opacity 0.4s;
+    }
+    .spinner {
+      width: 44px;
+      height: 44px;
+      border: 4px solid #333;
+      border-top-color: var(--green);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── EMPTY STATE ───────────────────────────── */
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--muted);
+    }
+    .empty-state .es-icon { font-size: 44px; margin-bottom: 12px; }
+    .empty-state h4 { font-size: 16px; color: #ccc; margin-bottom: 6px; }
+    .empty-state p { font-size: 13px; max-width: 400px; margin: 0 auto; }
+
+    /* ── EMOTION LEGEND DOT ─────────────────────── */
+    .emo-dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 5px;
+    }
+
+    /* ── REFRESH BUTTON ────────────────────────── */
+    .refresh-btn {
+      padding: 7px 16px;
+      background: #1a1a2e;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .refresh-btn:hover {
+      border-color: var(--green);
+      color: var(--green);
+    }
+
+    /* ── CALLOUT BANNER ────────────────────────── */
+    .callout-box {
+      background: rgba(0, 153, 204, 0.08);
+      border: 1px solid rgba(0, 153, 204, 0.25);
+      border-radius: 10px;
+      padding: 12px 18px;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Loading overlay shown while data fetches -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div style="color: var(--muted); font-size: 14px;">Compiling your personalized learning analytics…</div>
+</div>
+
+<!-- ── HEADER ─────────────────────────────────────────────────────────── -->
+<header class="dash-header">
+  <div>
+    <div class="logo">🧠 Emotion<span>LearnAI</span></div>
+    <div class="dash-subtitle">Personalized Learning &amp; Cognitive Analytics Dashboard</div>
+  </div>
+  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+    <button class="refresh-btn" id="refreshBtn" onclick="loadDashboard()">↻ Refresh</button>
+    <a href="/interview" class="back-btn" style="border-color:#00e5ff66;color:#00e5ff">🎙️ AI Interview</a>
+    <a href="/leaderboard" class="back-btn" style="border-color:#FFD70066;color:#FFD700">🏆 Leaderboard</a>
+    <a href="/profile" class="back-btn" style="border-color:#0099CC66;color:#0099CC">👤 Profile</a>
+    <a href="/select-role" class="back-btn" style="border-color:#AA00FF66;color:#AA00FF">🌐 Platform Hub</a>
+    <a href="/" class="back-btn">← Back to Learning</a>
+  </div>
+</header>
+
+<!-- ── MAIN BODY ──────────────────────────────────────────────────────── -->
+<main class="dash-body">
+
+  <!-- ── 1. KPI OVERVIEW CARDS ───────────────────────────────────────── -->
+  <div class="section-title">
+    <span>📊 Student Performance &amp; Mastery Overview</span>
+    <span style="font-size:11px;font-weight:400;color:var(--muted)">Scoped to authenticated session</span>
+  </div>
+  <div class="row g-3 mb-2">
+    <!-- Overall Accuracy -->
+    <div class="col-6 col-lg-2">
+      <div class="stat-card green">
+        <div class="stat-icon">🎯</div>
+        <div class="stat-label">Accuracy</div>
+        <div class="stat-value" id="cardAccuracy">—</div>
+        <div class="stat-sub" id="cardAccuracySub">Across all attempts</div>
+      </div>
+    </div>
+    <!-- Average Mastery -->
+    <div class="col-6 col-lg-2">
+      <div class="stat-card cyan">
+        <div class="stat-icon">🎓</div>
+        <div class="stat-label">Avg. Mastery</div>
+        <div class="stat-value" id="cardMastery">—</div>
+        <div class="stat-sub" id="cardMasterySub">Weighted formula</div>
+      </div>
+    </div>
+    <!-- Questions Answered -->
+    <div class="col-6 col-lg-2">
+      <div class="stat-card blue">
+        <div class="stat-icon">📝</div>
+        <div class="stat-label">Questions</div>
+        <div class="stat-value" id="cardTotal">—</div>
+        <div class="stat-sub" id="cardTotalSub">Logged attempts</div>
+      </div>
+    </div>
+    <!-- Avg Response Time -->
+    <div class="col-6 col-lg-2">
+      <div class="stat-card orange">
+        <div class="stat-icon">⏱️</div>
+        <div class="stat-label">Avg. Time</div>
+        <div class="stat-value" id="cardTime">—</div>
+        <div class="stat-sub">Seconds / question</div>
+      </div>
+    </div>
+    <!-- Revision Completion Rate -->
+    <div class="col-6 col-lg-2">
+      <div class="stat-card blue">
+        <div class="stat-icon">📅</div>
+        <div class="stat-label">Revision Rate</div>
+        <div class="stat-value" id="cardRevision">—</div>
+        <div class="stat-sub" id="cardRevisionSub">Spaced repetition</div>
+      </div>
+    </div>
+    <!-- Dominant Emotion -->
+    <div class="col-6 col-lg-2">
+      <div class="stat-card purple">
+        <div class="stat-icon">😊</div>
+        <div class="stat-label">Dominant State</div>
+        <div class="stat-value" id="cardEmotion" style="font-size:26px">—</div>
+        <div class="stat-sub">Cognitive signal</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 2. EXPLAINABLE PERSONALIZED RECOMMENDATIONS ─────────────────── -->
+  <div class="section-title">
+    <span>💡 Explainable Learning Recommendations</span>
+    <span style="font-size:11px;font-weight:400;color:var(--cyan)">Derived directly from your performance telemetry</span>
+  </div>
+  <div class="chart-card mb-4" style="height:auto">
+    <div class="rec-container" id="recommendationsList">
+      <div style="color:var(--muted);font-size:13px">Generating personalized insights…</div>
+    </div>
+  </div>
+
+  <!-- ── 3. TOPIC-WISE MASTERY MATRIX ─────────────────────────────────── -->
+  <div class="section-title">
+    <span>🧠 Topic Mastery Breakdown</span>
+    <div id="topicHighlights" style="display:inline-flex;gap:8px"></div>
+  </div>
+  <div class="chart-card mb-4" style="height:auto;padding:0;overflow:hidden">
+    <div class="table-responsive">
+      <table class="custom-table" id="topicMasteryTable">
+        <thead>
+          <tr>
+            <th>Topic / Subject</th>
+            <th>Attempts (Correct / Wrong)</th>
+            <th>Accuracy Rate</th>
+            <th>Mastery Index</th>
+            <th>Learning Status</th>
+            <th style="text-align:right">Action</th>
+          </tr>
+        </thead>
+        <tbody id="topicMasteryBody">
+          <tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">Loading topic mastery data…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── 4. PERFORMANCE & RESPONSE-TIME TRENDS (WITH DATE RANGE) ───────── -->
+  <div class="section-title">
+    <span>📈 Performance Trends &amp; Response Times</span>
+    <div class="range-selector">
+      <button class="range-btn active" data-range="all" onclick="changeRange('all')">All History</button>
+      <button class="range-btn" data-range="30d" onclick="changeRange('30d')">Last 30 Days</button>
+      <button class="range-btn" data-range="7d" onclick="changeRange('7d')">Last 7 Days</button>
+    </div>
+  </div>
+
+  <!-- Recent vs Baseline callout banner -->
+  <div id="recentComparisonCallout" class="callout-box" style="display:none">
+    <div style="font-size:20px">⚖️</div>
+    <div id="recentComparisonText" style="flex:1"></div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <!-- Accuracy Over Time -->
+    <div class="col-12 col-lg-6">
+      <div class="chart-card">
+        <h5>
+          <span>Accuracy Trend</span>
+          <span style="font-size:11px;color:var(--green)">Target: 75%+</span>
+        </h5>
+        <p class="chart-desc">Cumulative and daily accuracy progression over time.</p>
+        <div class="chart-wrap">
+          <canvas id="accuracyChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Average Response Time Trend -->
+    <div class="col-12 col-lg-6">
+      <div class="chart-card">
+        <h5>
+          <span>Response Speed Trend</span>
+          <span style="font-size:11px;color:var(--orange)">Target: &lt; 15s</span>
+        </h5>
+        <p class="chart-desc">Average response time per question (seconds) across dates.</p>
+        <div class="chart-wrap">
+          <canvas id="responseTimeChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 5. SPACED REPETITION & BEFORE-AFTER ASSESSMENTS ──────────────── -->
+  <div class="row g-3 mb-4">
+    <!-- Spaced Repetition & Retention -->
+    <div class="col-12 col-lg-5">
+      <div class="chart-card">
+        <h5>
+          <span>📅 Spaced Repetition &amp; Retention</span>
+          <span class="badge-pill-soft pill-blue" id="retentionBadge">Monitoring</span>
+        </h5>
+        <p class="chart-desc">Tracks scheduled reviews and measured memory retention.</p>
+        
+        <div class="row g-2 mb-3">
+          <div class="col-4">
+            <div style="background:var(--bg3);padding:10px;border-radius:8px;border:1px solid var(--border);text-align:center">
+              <div style="font-size:11px;color:var(--muted)">DUE TODAY</div>
+              <div style="font-size:22px;font-weight:800;color:var(--orange)" id="repDue">—</div>
+            </div>
+          </div>
+          <div class="col-4">
+            <div style="background:var(--bg3);padding:10px;border-radius:8px;border:1px solid var(--border);text-align:center">
+              <div style="font-size:11px;color:var(--muted)">OVERDUE</div>
+              <div style="font-size:22px;font-weight:800;color:var(--red)" id="repOverdue">—</div>
+            </div>
+          </div>
+          <div class="col-4">
+            <div style="background:var(--bg3);padding:10px;border-radius:8px;border:1px solid var(--border);text-align:center">
+              <div style="font-size:11px;color:var(--muted)">COMPLETED</div>
+              <div style="font-size:22px;font-weight:800;color:var(--green)" id="repCompleted">—</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-bottom:14px">
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+            <span style="color:var(--muted)">Revision Schedule Completion</span>
+            <span style="font-weight:700" id="repCompletionPct">—%</span>
+          </div>
+          <div class="metric-progress" style="width:100%;height:10px">
+            <div class="metric-progress-fill" id="repProgressBar" style="width:0%;background:var(--cyan)"></div>
+          </div>
+        </div>
+
+        <div style="background:var(--bg3);padding:12px 14px;border-radius:8px;border:1px solid var(--border)">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:4px">Retention-Check Accuracy</div>
+          <div style="display:flex;align-items:baseline;gap:8px">
+            <div style="font-size:20px;font-weight:800;color:#fff" id="retentionAccuracy">—</div>
+            <div style="font-size:12px;color:var(--muted)" id="retentionStatusText">Checking schedule…</div>
+          </div>
+        </div>
+
+        <div id="overdueTopicsAlert" style="display:none;margin-top:12px;font-size:12px;color:var(--red);background:#FF444415;padding:8px 12px;border-radius:6px;border:1px solid #FF444433"></div>
+      </div>
+    </div>
+
+    <!-- Before-and-After Assessment Comparison -->
+    <div class="col-12 col-lg-7">
+      <div class="chart-card">
+        <h5>
+          <span>🔄 Before &amp; After Assessment Comparison</span>
+          <span style="font-size:11px;color:var(--muted)">Initial vs. Latest attempts</span>
+        </h5>
+        <p class="chart-desc">Tracks learning delta and response speed changes per topic over time.</p>
+        
+        <div id="beforeAfterContainer">
+          <div style="color:var(--muted);font-size:13px;padding:20px 0">Loading comparison metrics…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 6. COGNITIVE EMOTION SIGNALS & DIFFICULTY ───────────────────── -->
+  <div class="section-title">😊 Emotion Signals &amp; Adaptive Progression</div>
+  <div class="row g-3 mb-4">
+    <!-- Emotion Distribution -->
+    <div class="col-12 col-lg-6">
+      <div class="chart-card">
+        <h5>Emotion Frequency Distribution</h5>
+        <p class="chart-desc">Distribution of detected emotions during learning sessions.</p>
+        <div class="chart-wrap">
+          <canvas id="emotionChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Difficulty Progression -->
+    <div class="col-12 col-lg-6">
+      <div class="chart-card">
+        <h5>Difficulty Progression</h5>
+        <p class="chart-desc">Adaptive difficulty adjustments based on real-time performance.</p>
+        <div class="chart-wrap">
+          <canvas id="difficultyChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 7. HARDEST QUESTIONS & REVIEW BANNER ────────────────────────── -->
+  <div class="section-title">🔥 Hardest Questions Globally</div>
+  <div class="chart-card mb-4" id="hardestQCard">
+    <h5>Questions Most Often Answered Wrong</h5>
+    <p class="chart-desc">Globally tracked — questions with highest wrong-answer rate (minimum 3 attempts).</p>
+    <div id="hardestQList"><div style="color:var(--muted);font-size:13px">Loading…</div></div>
+  </div>
+
+  <!-- Spaced Review Banner -->
+  <div id="reviewBanner" style="display:none" class="rec-item priority-medium mb-4">
+    <div class="rec-header">
+      <div class="rec-title" style="color:var(--orange)">📅 Spaced Review Due</div>
+      <a href="/" class="rec-action-btn" style="background:var(--orange)">Start Review Session</a>
+    </div>
+    <div id="reviewBannerText" class="rec-message"></div>
+  </div>
+
+</main>
+
+<!-- ── SCRIPTS ────────────────────────────────────────────────────────── -->
+<script>
+/*
+ * EmotionLearnAI — Dashboard Logic
+ * Fetches /api/dashboard/stats with date range support and renders:
+ * - Summary KPI cards
+ * - Topic Mastery matrix with weighted formulas
+ * - Accuracy & Response Time trend charts
+ * - Spaced repetition & retention metrics
+ * - Before & After assessment comparisons
+ * - Explainable recommendations
+ */
+
+// Global Chart defaults
+Chart.defaults.color = '#888';
+Chart.defaults.borderColor = '#2a2a3e';
+Chart.defaults.font.family = "'Inter', sans-serif";
+
+const EMO_COLORS = {
+  happy:    '#00C851',
+  neutral:  '#aaaaaa',
+  surprise: '#0099CC',
+  sad:      '#FF8800',
+  angry:    '#FF4444',
+  fear:     '#AA00FF',
+  disgust:  '#FFBB33',
+};
+
+const DIFF_LABELS = { 1: 'Easy', 2: 'Medium', 3: 'Hard' };
+
+let currentRange = 'all';
+let accChart = null;
+let timeChart = null;
+let diffChart = null;
+let emoChart = null;
+
+/**
+ * Filter by date range (all, 30d, 7d)
+ */
+function changeRange(range) {
+  currentRange = range;
+  document.querySelectorAll('.range-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.range === range);
+  });
+  loadDashboard(range);
+}
+
+/**
+ * Main loader
+ */
+async function loadDashboard(range = currentRange) {
+  const overlay = document.getElementById('loadingOverlay');
+  overlay.style.opacity = '1';
+  overlay.style.display = 'flex';
+
+  try {
+    const res = await fetch(`/api/dashboard/stats?range=${range}`);
+    const data = await res.json();
+
+    if (data.error) {
+      console.error('Dashboard API error:', data.error);
+      return;
+    }
+
+    renderKPICards(data);
+    renderExplainableRecommendations(data.explainable_recommendations, data.recommendation);
+    renderTopicMastery(data.topic_mastery);
+    renderTrends(data.trend_analysis, data.accuracy_over_time);
+    renderRevisionAnalytics(data.revision_analytics);
+    renderBeforeAfter(data.before_after);
+    renderDifficultyChart(data.difficulty_progress);
+    renderEmotionChart(data.emotion_distribution);
+
+  } catch (err) {
+    console.error('Failed to load dashboard:', err);
+  } finally {
+    overlay.style.opacity = '0';
+    setTimeout(() => { overlay.style.display = 'none'; }, 350);
+  }
+}
+
+/**
+ * 1. KPI Cards
+ */
+function renderKPICards(data) {
+  const summary = data.analytics_summary || {};
+  
+  // Accuracy
+  const acc = summary.overall_accuracy !== undefined ? summary.overall_accuracy : data.overall_accuracy;
+  document.getElementById('cardAccuracy').textContent = data.total_questions > 0 ? `${acc}%` : '—';
+  
+  // Recent improvement badge on accuracy
+  const recentImp = summary.recent_improvement_pct;
+  const accSub = document.getElementById('cardAccuracySub');
+  if (recentImp !== undefined && recentImp !== null && Math.abs(recentImp) > 0) {
+    const sign = recentImp >= 0 ? '+' : '';
+    const color = recentImp >= 0 ? 'var(--green)' : 'var(--red)';
+    accSub.innerHTML = `<span style="color:${color};font-weight:700">${sign}${recentImp}%</span> recent trend`;
+  } else {
+    accSub.textContent = 'Across all attempts';
+  }
+
+  // Mastery
+  const mastery = summary.average_mastery !== undefined ? summary.average_mastery : '—';
+  document.getElementById('cardMastery').textContent = typeof mastery === 'number' ? `${mastery}%` : mastery;
+  const masterySub = document.getElementById('cardMasterySub');
+  if (typeof mastery === 'number') {
+    if (mastery >= 75) masterySub.innerHTML = '<span class="pill-green badge-pill-soft">High Mastery</span>';
+    else if (mastery >= 50) masterySub.innerHTML = '<span class="pill-blue badge-pill-soft">Progressing</span>';
+    else masterySub.innerHTML = '<span class="pill-red badge-pill-soft">Needs Practice</span>';
+  }
+
+  // Questions
+  document.getElementById('cardTotal').textContent = data.total_questions || '0';
+  document.getElementById('cardTotalSub').textContent = `${data.total_questions || 0} total questions`;
+
+  // Time
+  document.getElementById('cardTime').textContent = data.avg_time > 0 ? `${data.avg_time}s` : '—';
+
+  // Revision Completion
+  const rev = data.revision_analytics || {};
+  const revRate = rev.completion_rate_pct !== undefined ? rev.completion_rate_pct : summary.revision_completion_rate;
+  document.getElementById('cardRevision').textContent = revRate !== undefined ? `${revRate}%` : '—';
+  const revSub = document.getElementById('cardRevisionSub');
+  if (rev.overdue > 0) {
+    revSub.innerHTML = `<span style="color:var(--red);font-weight:700">${rev.overdue} overdue</span>`;
+  } else if (rev.due_today > 0) {
+    revSub.innerHTML = `<span style="color:var(--orange);font-weight:700">${rev.due_today} due today</span>`;
+  } else {
+    revSub.textContent = 'Schedule up to date';
+  }
+
+  // Dominant emotion
+  const emoDistrib = data.emotion_distribution || {};
+  const dominantEmo = Object.entries(emoDistrib).sort((a, b) => b[1] - a[1])[0];
+  const EMOJI_MAP = {
+    happy: '😄 Happy', sad: '😢 Sad', angry: '😠 Angry', fear: '😨 Fear',
+    surprise: '😲 Surprise', disgust: '🤢 Disgust', neutral: '😐 Neutral'
+  };
+  document.getElementById('cardEmotion').textContent =
+    dominantEmo ? (EMOJI_MAP[dominantEmo[0]] || dominantEmo[0]) : '—';
+}
+
+/**
+ * 2. Explainable Recommendations
+ */
+function renderExplainableRecommendations(recs, legacyText) {
+  const container = document.getElementById('recommendationsList');
+  if (!recs || recs.length === 0) {
+    container.innerHTML = `
+      <div class="rec-item">
+        <div class="rec-header">
+          <div class="rec-title">Personalized Learning Insight</div>
+        </div>
+        <div class="rec-message">${legacyText || 'Complete quizzes or exercises to generate tailored recommendations!'}</div>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = recs.map(r => {
+    let priorityClass = 'priority-medium';
+    if (r.type === 'revision_overdue' || r.type === 'accuracy_alert') priorityClass = 'priority-urgent';
+    if (r.type === 'mastery_milestone') priorityClass = 'priority-success';
+
+    return `
+      <div class="rec-item ${priorityClass}">
+        <div class="rec-header">
+          <div class="rec-title">${escapeHtml(r.title)}</div>
+          <a href="${escapeHtml(r.action_url || '/')}" class="rec-action-btn">Take Action →</a>
+        </div>
+        <div class="rec-message">${escapeHtml(r.recommendation)}</div>
+        <div class="rec-reason">🔍 <b>Evidence:</b> ${escapeHtml(r.reason)}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+/**
+ * 3. Topic Mastery Matrix
+ */
+function renderTopicMastery(masteryData) {
+  const tbody = document.getElementById('topicMasteryBody');
+  const highlightsEl = document.getElementById('topicHighlights');
+
+  if (!masteryData || !masteryData.topics || masteryData.topics.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">No topic attempts recorded yet. Answer questions in any topic to build mastery!</td></tr>';
+    highlightsEl.innerHTML = '';
+    return;
+  }
+
+  // Highlights
+  let hlHtml = '';
+  if (masteryData.strongest_topic) {
+    hlHtml += `<span class="badge-pill-soft pill-green">⭐ Strongest: ${escapeHtml(masteryData.strongest_topic.topic)} (${masteryData.strongest_topic.mastery}%)</span>`;
+  }
+  if (masteryData.weakest_topic && (!masteryData.strongest_topic || masteryData.weakest_topic.topic !== masteryData.strongest_topic.topic)) {
+    hlHtml += `<span class="badge-pill-soft pill-red">⚠️ Focus Topic: ${escapeHtml(masteryData.weakest_topic.topic)} (${masteryData.weakest_topic.mastery}%)</span>`;
+  }
+  highlightsEl.innerHTML = hlHtml;
+
+  // Rows
+  tbody.innerHTML = masteryData.topics.map(t => {
+    let badgeClass = 'badge-learning';
+    if (t.status === 'Mastered') badgeClass = 'badge-mastered';
+    else if (t.status === 'Proficient') badgeClass = 'badge-proficient';
+    else if (t.status === 'Needs Revision') badgeClass = 'badge-needs-revision';
+    else if (t.status === 'Insufficient Data') badgeClass = 'badge-insufficient';
+
+    const accColor = t.accuracy >= 75 ? 'var(--green)' : (t.accuracy >= 50 ? 'var(--blue)' : 'var(--red)');
+    const masteryColor = t.mastery >= 85 ? 'var(--green)' : (t.mastery >= 65 ? 'var(--blue)' : (t.mastery >= 40 ? 'var(--orange)' : 'var(--red)'));
+
+    return `
+      <tr>
+        <td>
+          <div style="font-weight:700;color:#fff">${escapeHtml(t.topic)}</div>
+          <div style="font-size:11px;color:var(--muted)">${t.min_attempts_met ? 'Reliable sample' : 'Needs at least 3 attempts'}</div>
+        </td>
+        <td>
+          <div><b>${t.total_attempts}</b> total</div>
+          <div style="font-size:11px;color:var(--muted)">
+            <span style="color:var(--green)">${t.correct} correct</span> &bull; 
+            <span style="color:var(--red)">${t.incorrect} incorrect</span>
+          </div>
+        </td>
+        <td>
+          <div class="metric-progress">
+            <div class="metric-progress-fill" style="width:${t.accuracy}%;background:${accColor}"></div>
+          </div>
+          <span style="font-weight:700;color:${accColor}">${t.accuracy}%</span>
+        </td>
+        <td>
+          <div class="metric-progress">
+            <div class="metric-progress-fill" style="width:${t.mastery}%;background:${masteryColor}"></div>
+          </div>
+          <span style="font-weight:700;color:${masteryColor}">${t.mastery}%</span>
+        </td>
+        <td>
+          <span class="badge-status ${badgeClass}">${escapeHtml(t.status)}</span>
+        </td>
+        <td style="text-align:right">
+          <a href="/?subject=${encodeURIComponent(t.topic)}" class="back-btn" style="padding:4px 10px;font-size:11px">Practice</a>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+/**
+ * 4. Trends (Accuracy and Response Time)
+ */
+function renderTrends(trendData, legacyAccData) {
+  // Callout banner
+  const callout = document.getElementById('recentComparisonCallout');
+  const calloutText = document.getElementById('recentComparisonText');
+  if (trendData && trendData.recent_vs_earlier && trendData.recent_vs_earlier.diff_pct !== null) {
+    const comp = trendData.recent_vs_earlier;
+    const diffSign = comp.diff_pct >= 0 ? '+' : '';
+    const diffColor = comp.diff_pct >= 0 ? 'var(--green)' : 'var(--red)';
+    const timeDeltaText = comp.time_diff_sec !== null
+      ? ` | Speed delta: <b>${comp.time_diff_sec > 0 ? '+' : ''}${comp.time_diff_sec}s</b> (${comp.recent_avg_time}s vs ${comp.earlier_avg_time}s)`
+      : '';
+
+    calloutText.innerHTML = `
+      <b>Performance Trajectory:</b> Recent accuracy is <b style="color:${diffColor}">${comp.recent_accuracy}%</b> 
+      compared with earlier baseline of <b>${comp.earlier_accuracy}%</b> 
+      (<span style="color:${diffColor};font-weight:700">${diffSign}${comp.diff_pct}% change</span>)${timeDeltaText}.
+    `;
+    callout.style.display = 'flex';
+  } else {
+    callout.style.display = 'none';
+  }
+
+  // Accuracy Chart
+  const accCtx = document.getElementById('accuracyChart').getContext('2d');
+  if (accChart) accChart.destroy();
+
+  const dateTrends = (trendData && trendData.date_trends && trendData.date_trends.length > 0)
+    ? trendData.date_trends
+    : null;
+
+  if (dateTrends) {
+    const labels = dateTrends.map(d => d.date);
+    const accValues = dateTrends.map(d => d.accuracy);
+
+    accChart = new Chart(accCtx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Daily Accuracy (%)',
+          data: accValues,
+          borderColor: '#00C851',
+          backgroundColor: 'rgba(0,200,81,0.08)',
+          borderWidth: 2.5,
+          pointRadius: 4,
+          pointBackgroundColor: '#00C851',
+          tension: 0.3,
+          fill: true,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: { ticks: { color: '#888', font: { size: 11 } } },
+          y: {
+            min: 0,
+            max: 100,
+            ticks: { callback: v => v + '%', color: '#888', font: { size: 11 } },
+            grid: { color: '#1e1e2e' }
+          }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => ` Accuracy: ${ctx.parsed.y}% (${dateTrends[ctx.dataIndex].correct}/${dateTrends[ctx.dataIndex].total} correct)`
+            }
+          }
+        }
+      }
+    });
+  } else if (legacyAccData && legacyAccData.length > 0) {
+    // Fallback to cumulative attempts
+    const labels = legacyAccData.map(d => d.timestamp);
+    const values = legacyAccData.map(d => d.accuracy);
+    accChart = new Chart(accCtx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Cumulative Accuracy (%)',
+          data: values,
+          borderColor: '#00C851',
+          backgroundColor: 'rgba(0,200,81,0.08)',
+          borderWidth: 2.5,
+          pointRadius: legacyAccData.length > 30 ? 0 : 4,
+          pointBackgroundColor: '#00C851',
+          tension: 0.35,
+          fill: true,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: { ticks: { maxTicksLimit: 8, color: '#666', font: { size: 11 } } },
+          y: { min: 0, max: 100, ticks: { callback: v => v + '%', color: '#666' }, grid: { color: '#1e1e2e' } }
+        },
+        plugins: { legend: { display: false } }
+      }
+    });
+  } else {
+    showEmpty(accCtx.canvas.parentElement, 'No accuracy telemetry logged for this period.');
+  }
+
+  // Response Time Chart
+  const timeCtx = document.getElementById('responseTimeChart').getContext('2d');
+  if (timeChart) timeChart.destroy();
+
+  if (dateTrends && dateTrends.some(d => d.avg_response_time > 0)) {
+    const labels = dateTrends.map(d => d.date);
+    const timeValues = dateTrends.map(d => d.avg_response_time);
+
+    timeChart = new Chart(timeCtx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Avg Response Time (s)',
+          data: timeValues,
+          backgroundColor: 'rgba(255, 136, 0, 0.35)',
+          borderColor: '#FF8800',
+          borderWidth: 2,
+          borderRadius: 6,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: { ticks: { color: '#888', font: { size: 11 } } },
+          y: {
+            beginAtZero: true,
+            ticks: { callback: v => v + 's', color: '#888', font: { size: 11 } },
+            grid: { color: '#1e1e2e' }
+          }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => ` Response Speed: ${ctx.parsed.y}s avg`
+            }
+          }
+        }
+      }
+    });
+  } else {
+    showEmpty(timeCtx.canvas.parentElement, 'No response time telemetry logged for this period.');
+  }
+}
+
+/**
+ * 5. Spaced Repetition & Retention
+ */
+function renderRevisionAnalytics(rev) {
+  if (!rev) return;
+
+  document.getElementById('repDue').textContent = rev.due_today !== undefined ? rev.due_today : '0';
+  document.getElementById('repOverdue').textContent = rev.overdue !== undefined ? rev.overdue : '0';
+  document.getElementById('repCompleted').textContent = rev.completed !== undefined ? rev.completed : '0';
+  
+  const compRate = rev.completion_rate_pct || 0;
+  document.getElementById('repCompletionPct').textContent = `${compRate}%`;
+  document.getElementById('repProgressBar').style.width = `${Math.min(100, compRate)}%`;
+
+  // Retention Check
+  const retAccEl = document.getElementById('retentionAccuracy');
+  const retStatusEl = document.getElementById('retentionStatusText');
+  const retBadge = document.getElementById('retentionBadge');
+
+  if (rev.retention_check_accuracy !== null && rev.retention_check_accuracy !== undefined) {
+    retAccEl.textContent = `${rev.retention_check_accuracy}%`;
+    retStatusEl.textContent = rev.retention_check_status || 'Retention measured';
+    retBadge.textContent = 'Active Retention';
+    retBadge.className = 'badge-pill-soft pill-green';
+  } else {
+    retAccEl.textContent = 'N/A';
+    retStatusEl.textContent = 'Retention check needed (complete overdue reviews to measure)';
+    retBadge.textContent = 'Action Required';
+    retBadge.className = 'badge-pill-soft pill-red';
+  }
+
+  // Overdue topics alert
+  const overdueAlert = document.getElementById('overdueTopicsAlert');
+  if (rev.overdue_topics && rev.overdue_topics.length > 0) {
+    overdueAlert.innerHTML = `⚠️ <b>Overdue Topics:</b> ${rev.overdue_topics.map(t => escapeHtml(t)).join(', ')}`;
+    overdueAlert.style.display = 'block';
+  } else {
+    overdueAlert.style.display = 'none';
+  }
+}
+
+/**
+ * 6. Before-and-After Assessment Comparison
+ */
+function renderBeforeAfter(baData) {
+  const container = document.getElementById('beforeAfterContainer');
+  if (!baData || !baData.has_data || !baData.comparisons || baData.comparisons.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state" style="padding:24px 10px">
+        <div class="es-icon">🔄</div>
+        <h4>Insufficient Multi-Session History</h4>
+        <p>${baData && baData.message ? escapeHtml(baData.message) : 'Complete at least two study or revision sessions in any topic to unlock before-and-after assessment comparisons.'}</p>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="table-responsive">
+      <table class="custom-table">
+        <thead>
+          <tr>
+            <th>Topic</th>
+            <th>Initial Accuracy</th>
+            <th>Latest Accuracy</th>
+            <th>Delta</th>
+            <th>Response Time Change</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${baData.comparisons.map(c => {
+            const deltaSign = c.accuracy_diff >= 0 ? '+' : '';
+            const deltaColor = c.accuracy_diff >= 0 ? 'var(--green)' : 'var(--red)';
+            const timeDeltaText = c.time_diff !== null
+              ? `${c.time_diff > 0 ? '+' : ''}${c.time_diff}s (${c.initial_avg_time}s → ${c.latest_avg_time}s)`
+              : '—';
+
+            let statusBadge = 'pill-muted';
+            if (c.status.includes('Significant Improvement')) statusBadge = 'pill-green';
+            else if (c.status.includes('Moderate Improvement')) statusBadge = 'pill-blue';
+            else if (c.status.includes('Needs Attention')) statusBadge = 'pill-red';
+
+            return `
+              <tr>
+                <td><b>${escapeHtml(c.topic)}</b></td>
+                <td>${c.initial_accuracy}% <span style="font-size:11px;color:var(--muted)">(${c.initial_count} attempts)</span></td>
+                <td><b>${c.latest_accuracy}%</b> <span style="font-size:11px;color:var(--muted)">(${c.latest_count} attempts)</span></td>
+                <td><b style="color:${deltaColor}">${deltaSign}${c.accuracy_diff}%</b></td>
+                <td style="font-size:12px;color:var(--muted)">${timeDeltaText}</td>
+                <td><span class="badge-pill-soft ${statusBadge}">${escapeHtml(c.status)}</span></td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+/**
+ * 7. Difficulty Chart
+ */
+function renderDifficultyChart(data) {
+  const ctx = document.getElementById('difficultyChart').getContext('2d');
+  if (diffChart) diffChart.destroy();
+
+  if (!data || data.length === 0) {
+    showEmpty(ctx.canvas.parentElement, 'No difficulty telemetry logged yet.');
+    return;
+  }
+
+  const labels = data.map(d => d.timestamp);
+  const values = data.map(d => d.difficulty_num);
+
+  diffChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Difficulty Level',
+        data: values,
+        borderColor: '#FF8800',
+        backgroundColor: 'rgba(255,136,0,0.08)',
+        borderWidth: 2.5,
+        pointRadius: data.length > 30 ? 0 : 4,
+        pointBackgroundColor: '#FF8800',
+        stepped: true,
+        fill: true,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { ticks: { maxTicksLimit: 6, color: '#666', font: { size: 11 } } },
+        y: {
+          min: 0.5,
+          max: 3.5,
+          ticks: {
+            stepSize: 1,
+            callback: v => DIFF_LABELS[v] || '',
+            color: '#666',
+            font: { size: 11 }
+          },
+          grid: { color: '#1e1e2e' }
+        }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` Level: ${DIFF_LABELS[ctx.parsed.y] || ctx.parsed.y}`
+          }
+        }
+      }
+    }
+  });
+}
+
+/**
+ * 8. Emotion Chart
+ */
+function renderEmotionChart(distribution) {
+  const ctx = document.getElementById('emotionChart').getContext('2d');
+  if (emoChart) emoChart.destroy();
+
+  if (!distribution || Object.keys(distribution).length === 0) {
+    showEmpty(ctx.canvas.parentElement, 'No emotion frames captured yet.');
+    return;
+  }
+
+  const sorted = Object.entries(distribution).sort((a, b) => b[1] - a[1]);
+  const labels = sorted.map(([emo]) => emo.charAt(0).toUpperCase() + emo.slice(1));
+  const values = sorted.map(([, cnt]) => cnt);
+  const colors = sorted.map(([emo]) => EMO_COLORS[emo] || '#aaa');
+  const bgColors = colors.map(c => c + '33');
+
+  emoChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Occurrences',
+        data: values,
+        backgroundColor: bgColors,
+        borderColor: colors,
+        borderWidth: 2,
+        borderRadius: 6,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { ticks: { color: '#666', font: { size: 11 } }, grid: { color: '#1e1e2e' } },
+        y: { ticks: { color: '#ccc', font: { size: 12 } }, grid: { display: false } }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` ${ctx.parsed.x} detected frame${ctx.parsed.x !== 1 ? 's' : ''}`
+          }
+        }
+      }
+    }
+  });
+}
+
+/**
+ * Helper to display empty state inside canvas wrap
+ */
+function showEmpty(container, message) {
+  container.innerHTML = `
+    <div class="empty-state">
+      <div class="es-icon">📊</div>
+      <h4>No Telemetry Available</h4>
+      <p>${escapeHtml(message)}</p>
+    </div>`;
+}
+
+function escapeHtml(text) {
+  if (!text) return '';
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+/**
+ * Load Hardest Questions globally
+ */
+async function loadHardestQuestions() {
+  try {
+    const res = await fetch('/api/analytics/hardest-questions');
+    const data = await res.json();
+    const el = document.getElementById('hardestQList');
+    if (!data.length) {
+      el.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:20px 0">Answer at least 3 questions per topic to see hardest questions.</div>';
+      return;
+    }
+    el.innerHTML = data.map(q => `
+      <div style="display:flex;align-items:center;gap:14px;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div style="font-size:22px;font-weight:800;color:${q.wrong_rate > 70 ? '#FF4444' : q.wrong_rate > 40 ? '#FF8800' : '#FFBB33'};min-width:52px">${q.wrong_rate}%</div>
+        <div style="flex:1">
+          <div style="font-weight:600;font-size:14px">${escapeHtml(q.question_id)}</div>
+          <div style="font-size:12px;color:var(--muted)">${escapeHtml(q.subject)} &bull; ${q.total_attempts} attempts &bull; avg ${q.avg_time}s</div>
+        </div>
+        <div style="font-size:11px;padding:3px 10px;border-radius:20px;background:#FF444422;color:#FF4444">${q.wrong_count} wrong</div>
+      </div>`).join('');
+  } catch (e) {
+    document.getElementById('hardestQList').innerHTML = '<div style="color:var(--muted)">Could not load hardest questions.</div>';
+  }
+}
+
+/**
+ * Check spaced repetition due banner
+ */
+async function checkDueReviews() {
+  try {
+    const res = await fetch('/api/spaced-repetition/due');
+    const data = await res.json();
+    if (data.due_count > 0) {
+      document.getElementById('reviewBanner').style.display = 'block';
+      document.getElementById('reviewBannerText').textContent =
+        `You have ${data.due_count} question${data.due_count > 1 ? 's' : ''} due for spaced repetition review today!`;
+    }
+  } catch (e) {}
+}
+
+// Initialize on page load
+loadDashboard();
+loadHardestQuestions();
+checkDueReviews();
+</script>
+
+</body>
+</html>

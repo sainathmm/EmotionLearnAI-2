@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EmotionLearnAI — Employee Training</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Inter',sans-serif}
+body{background:#0f0f1a;color:#fff;min-height:100vh;display:flex;flex-direction:column}
+.header{background:linear-gradient(135deg,#1a1a2e,#16213e);padding:15px 30px;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #FF8800}
+.logo{font-size:22px;font-weight:700;color:#FF8800}
+.logo span{color:#fff}
+.nav-links{display:flex;gap:10px}
+.nav-links a{padding:6px 14px;border:1px solid #333;border-radius:8px;color:#aaa;font-size:12px;text-decoration:none;transition:all 0.2s}
+.nav-links a:hover{border-color:#FF8800;color:#FF8800}
+.main{max-width:960px;margin:0 auto;padding:30px 20px;width:100%}
+.page-title{font-size:28px;font-weight:800;margin-bottom:6px}
+.page-title span{color:#FF8800}
+.page-sub{font-size:14px;color:#aaa;margin-bottom:30px}
+.card{background:#1a1a2e;border:1px solid #2a2a3e;border-radius:14px;padding:24px;margin-bottom:20px}
+.card h3{font-size:16px;font-weight:700;margin-bottom:16px;color:#FF8800}
+.programs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
+.program-card{background:#0d1117;border:1px solid #2a2a3e;border-radius:12px;padding:18px;transition:all 0.2s}
+.program-card:hover{border-color:#FF8800}
+.program-name{font-size:15px;font-weight:700;margin-bottom:6px}
+.program-desc{font-size:12px;color:#aaa;margin-bottom:10px;line-height:1.5}
+.program-topics{font-size:11px;color:#555;margin-bottom:12px}
+.progress-bar{background:#1a1a2e;border-radius:6px;height:6px;margin-bottom:8px;overflow:hidden}
+.progress-fill{height:6px;background:linear-gradient(90deg,#FF8800,#FFBB33);border-radius:6px;transition:width 0.4s}
+.btn{padding:8px 18px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s}
+.btn-primary{background:#FF8800;color:#fff}
+.btn-primary:hover{background:#cc6d00}
+.btn-sm{padding:6px 14px;font-size:12px}
+.btn-outline{background:transparent;border:1px solid #333;color:#aaa}
+.btn-outline:hover{border-color:#FF8800;color:#FF8800}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:13px;color:#aaa;font-weight:600}
+.form-group input,.form-group textarea{padding:10px 14px;background:#0d1117;border:1px solid #333;border-radius:8px;color:#fff;font-size:13px;outline:none}
+.form-group input:focus,.form-group textarea:focus{border-color:#FF8800}
+.empty-state{text-align:center;padding:40px;color:#555}
+.empty-state .icon{font-size:40px;margin-bottom:12px}
+.tab-bar{display:flex;gap:8px;margin-bottom:20px}
+.tab{padding:8px 18px;border-radius:8px;border:1px solid #2a2a3e;background:#0d1117;color:#aaa;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s}
+.tab.active{background:#FF8800;border-color:#FF8800;color:#fff}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="logo">🧠 Emotion<span>LearnAI</span> <span style="color:#FF8800;font-size:14px;font-weight:600">— Employee Training</span></div>
+  <div class="nav-links">
+    <a href="/select-role">🏠 Home</a>
+    <a href="/">📚 Student Learning</a>
+    <a href="/logout">Logout</a>
+  </div>
+</div>
+<div class="main">
+  <div class="page-title">🏢 Employee <span>Training</span></div>
+  <div class="page-sub">Enroll in training programs, complete assessments, and track your development.</div>
+
+  <div class="tab-bar">
+    <button class="tab active" onclick="showTab('browse', this)">Browse Programs</button>
+    <button class="tab" onclick="showTab('enrolled', this)">My Enrollments</button>
+    <button class="tab" onclick="showTab('create', this)">Create Program</button>
+  </div>
+
+  <!-- Browse Programs -->
+  <div id="tab-browse">
+    <div class="card">
+      <h3>Available Training Programs</h3>
+      <div class="programs-grid" id="programsGrid">
+        <div class="empty-state"><div class="icon">📋</div><div>Loading programs...</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- My Enrollments -->
+  <div id="tab-enrolled" style="display:none">
+    <div class="card">
+      <h3>My Training Enrollments</h3>
+      <div id="enrolledList">
+        <div class="empty-state"><div class="icon">📚</div><div>Loading enrollments...</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Program -->
+  <div id="tab-create" style="display:none">
+    <div class="card">
+      <h3>Create Training Program</h3>
+      <div class="form-group">
+        <label>Program Name</label>
+        <input type="text" id="progName" placeholder="e.g. Python for Data Analysis">
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea id="progDesc" rows="3" placeholder="Brief description of the training program..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>Topics (comma-separated)</label>
+        <input type="text" id="progTopics" placeholder="e.g. Python Basics, Pandas, Data Visualization">
+      </div>
+      <button class="btn btn-primary" onclick="createProgram()">Create Program</button>
+      <div id="createMsg" style="margin-top:10px;font-size:13px;display:none"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+function showTab(tab, btn) {
+  document.querySelectorAll('[id^="tab-"]').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + tab).style.display = 'block';
+  btn.classList.add('active');
+  if (tab === 'browse') loadPrograms();
+  if (tab === 'enrolled') loadEnrollments();
+}
+
+async function loadPrograms() {
+  const programs = await fetch('/api/training/programs').then(r => r.json()).catch(() => []);
+  const grid = document.getElementById('programsGrid');
+  if (!programs.length) {
+    grid.innerHTML = '<div class="empty-state"><div class="icon">📋</div><div>No programs yet. Create one!</div></div>';
+    return;
+  }
+  grid.innerHTML = '';
+  programs.forEach(p => {
+    grid.innerHTML += `<div class="program-card">
+      <div class="program-name">${p.name}</div>
+      <div class="program-desc">${p.description || 'No description'}</div>
+      <div class="program-topics">📌 ${p.topics || 'General'}</div>
+      <button class="btn btn-primary btn-sm" onclick="enroll(${p.id}, '${p.name}')">Enroll</button>
+    </div>`;
+  });
+}
+
+async function enroll(programId, name) {
+  const res = await fetch('/api/training/enroll', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({program_id: programId})
+  }).then(r => r.json());
+  if (res.status === 'enrolled') {
+    alert('Enrolled in: ' + name);
+    loadPrograms();
+  }
+}
+
+async function loadEnrollments() {
+  const enrollments = await fetch('/api/training/my-enrollments').then(r => r.json()).catch(() => []);
+  const el = document.getElementById('enrolledList');
+  if (!enrollments.length) {
+    el.innerHTML = '<div class="empty-state"><div class="icon">📚</div><div>No enrollments yet. Browse programs to enroll.</div></div>';
+    return;
+  }
+  el.innerHTML = '';
+  enrollments.forEach(e => {
+    const prog = Math.round(e.progress || 0);
+    el.innerHTML += `<div style="background:#0d1117;border-radius:10px;padding:16px;margin-bottom:12px;border:1px solid #2a2a3e">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-size:15px;font-weight:700">${e.name}</div>
+        <div style="font-size:13px;color:#FF8800;font-weight:600">${prog}% Complete</div>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${prog}%"></div></div>
+      <div style="font-size:12px;color:#555">Topics: ${e.topics || 'General'} | Score: ${e.score || 0}%</div>
+      <div style="margin-top:10px;display:flex;gap:8px">
+        <a href="/?training=1" class="btn btn-primary btn-sm" style="text-decoration:none">Continue Learning →</a>
+        <button class="btn btn-outline btn-sm" onclick="markProgress(${e.program_id})">Update Progress</button>
+      </div>
+    </div>`;
+  });
+}
+
+async function markProgress(programId) {
+  const progress = prompt('Enter your progress percentage (0-100):');
+  if (progress === null) return;
+  const score = prompt('Enter your assessment score (0-100):');
+  if (score === null) return;
+  await fetch('/api/training/progress', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({program_id: programId, progress: parseFloat(progress), score: parseFloat(score)})
+  });
+  loadEnrollments();
+}
+
+async function createProgram() {
+  const name = document.getElementById('progName').value.trim();
+  const desc = document.getElementById('progDesc').value.trim();
+  const topics = document.getElementById('progTopics').value.trim();
+  if (!name) { alert('Program name is required.'); return; }
+  const res = await fetch('/api/training/create', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({name, description: desc, topics})
+  }).then(r => r.json());
+  const msg = document.getElementById('createMsg');
+  msg.style.display = 'block';
+  if (res.status === 'created') {
+    msg.style.color = '#00C851';
+    msg.textContent = '✅ Program created successfully!';
+    document.getElementById('progName').value = '';
+    document.getElementById('progDesc').value = '';
+    document.getElementById('progTopics').value = '';
+  } else {
+    msg.style.color = '#FF4444';
+    msg.textContent = '❌ Error: ' + (res.error || 'Unknown error');
+  }
+}
+
+loadPrograms();
+</script>
+</body>
+</html>

@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EmotionLearnAI — Admin Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Inter',sans-serif}
+body{background:#0f0f1a;color:#fff;min-height:100vh;display:flex;flex-direction:column}
+.header{background:linear-gradient(135deg,#1a1a2e,#16213e);padding:15px 30px;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #AA00FF;position:sticky;top:0;z-index:100}
+.logo{font-size:22px;font-weight:700;color:#AA00FF}
+.logo span{color:#fff}
+.nav-links{display:flex;gap:10px;align-items:center}
+.nav-links a{padding:6px 14px;border:1px solid #333;border-radius:8px;color:#aaa;font-size:12px;text-decoration:none;transition:all 0.2s}
+.nav-links a:hover{border-color:#AA00FF;color:#AA00FF}
+.main{max-width:1200px;margin:0 auto;padding:30px 20px;width:100%}
+.page-title{font-size:28px;font-weight:800;margin-bottom:6px}
+.page-title span{color:#AA00FF}
+.page-sub{font-size:14px;color:#aaa;margin-bottom:30px}
+
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px}
+@media(max-width:768px){.stats-grid{grid-template-columns:repeat(2,1fr)}}
+.stat-card{background:#1a1a2e;border:1px solid #2a2a3e;border-radius:12px;padding:20px;text-align:center;position:relative;overflow:hidden}
+.stat-card::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%;border-radius:12px 0 0 12px}
+.stat-card.purple::before{background:#AA00FF}
+.stat-card.green::before{background:#00C851}
+.stat-card.blue::before{background:#0099CC}
+.stat-card.orange::before{background:#FF8800}
+.stat-val{font-size:32px;font-weight:800}
+.stat-card.purple .stat-val{color:#AA00FF}
+.stat-card.green .stat-val{color:#00C851}
+.stat-card.blue .stat-val{color:#0099CC}
+.stat-card.orange .stat-val{color:#FF8800}
+.stat-lbl{font-size:12px;color:#555;margin-top:4px}
+
+.card{background:#1a1a2e;border:1px solid #2a2a3e;border-radius:14px;padding:24px;margin-bottom:20px}
+.card h3{font-size:16px;font-weight:700;margin-bottom:16px;color:#AA00FF}
+
+.tab-bar{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 18px;border-radius:8px;border:1px solid #2a2a3e;background:#0d1117;color:#aaa;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s}
+.tab.active{background:#AA00FF;border-color:#AA00FF;color:#fff}
+
+.data-table{width:100%;border-collapse:collapse;font-size:13px}
+.data-table th{text-align:left;padding:10px 14px;color:#555;font-weight:600;border-bottom:1px solid #2a2a3e;font-size:12px;text-transform:uppercase;letter-spacing:0.5px}
+.data-table td{padding:10px 14px;border-bottom:1px solid #1a1a2e;vertical-align:middle}
+.data-table tr:hover td{background:#1e1e30}
+.data-table tr:last-child td{border-bottom:none}
+
+.badge{display:inline-flex;align-items:center;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-green{background:#00C85122;color:#00C851;border:1px solid #00C85144}
+.badge-blue{background:#0099CC22;color:#0099CC;border:1px solid #0099CC44}
+.badge-orange{background:#FF880022;color:#FF8800;border:1px solid #FF880044}
+.badge-red{background:#FF444422;color:#FF4444;border:1px solid #FF444444}
+.badge-purple{background:#AA00FF22;color:#AA00FF;border:1px solid #AA00FF44}
+
+.btn{padding:6px 14px;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.2s;text-decoration:none;display:inline-block}
+.btn-primary{background:#AA00FF;color:#fff}
+.btn-primary:hover{background:#8800cc}
+.btn-outline{background:transparent;border:1px solid #333;color:#aaa}
+.btn-outline:hover{border-color:#AA00FF;color:#AA00FF}
+
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:13px;color:#aaa;font-weight:600}
+.form-group input,.form-group textarea,.form-group select{padding:10px 14px;background:#0d1117;border:1px solid #333;border-radius:8px;color:#fff;font-size:13px;outline:none}
+.form-group input:focus,.form-group textarea:focus,.form-group select:focus{border-color:#AA00FF}
+
+.chart-wrap{position:relative;height:220px}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px}
+@media(max-width:768px){.two-col{grid-template-columns:1fr}}
+
+.empty-state{text-align:center;padding:30px;color:#555}
+.section-label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#555;margin:20px 0 12px}
+
+.prog-bar{background:#0d1117;border-radius:6px;height:6px;overflow:hidden;margin-top:4px}
+.prog-fill{height:6px;border-radius:6px;background:linear-gradient(90deg,#AA00FF,#0099CC)}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">🧠 Emotion<span>LearnAI</span> <span style="color:#AA00FF;font-size:14px;font-weight:600">— Admin / Trainer Dashboard</span></div>
+  <div class="nav-links">
+    <a href="/select-role">🏠 Platform Hub</a>
+    <a href="/teacher">👨‍🏫 Teacher View</a>
+    <a href="/employee-training">🏢 Training</a>
+    <a href="/dashboard">📊 Analytics</a>
+    <a href="/logout">Logout</a>
+  </div>
+</div>
+
+<div class="main">
+  <div class="page-title">⚙️ Admin / <span>Trainer Dashboard</span></div>
+  <div class="page-sub">Platform overview — users, training programs, assessments, and reports.</div>
+
+  <!-- Stats -->
+  <div class="stats-grid">
+    <div class="stat-card purple"><div class="stat-val" id="statUsers">--</div><div class="stat-lbl">Registered Users</div></div>
+    <div class="stat-card green"><div class="stat-val" id="statPrograms">--</div><div class="stat-lbl">Training Programs</div></div>
+    <div class="stat-card blue"><div class="stat-val" id="statInterviews">--</div><div class="stat-lbl">Interviews Taken</div></div>
+    <div class="stat-card orange"><div class="stat-val" id="statAssessments">--</div><div class="stat-lbl">Skill Assessments</div></div>
+  </div>
+
+  <!-- Charts -->
+  <div class="two-col">
+    <div class="card" style="margin-bottom:0">
+      <h3>📊 Platform Activity</h3>
+      <div class="chart-wrap"><canvas id="activityChart"></canvas></div>
+    </div>
+    <div class="card" style="margin-bottom:0">
+      <h3>🛠️ Skill Assessment Coverage</h3>
+      <div class="chart-wrap"><canvas id="skillChart"></canvas></div>
+    </div>
+  </div>
+  <div style="margin-bottom:20px"></div>
+
+  <!-- Tabs -->
+  <div class="tab-bar">
+    <button class="tab active" onclick="showTab('users',this)">👥 Users</button>
+    <button class="tab" onclick="showTab('programs',this)">📋 Training Programs</button>
+    <button class="tab" onclick="showTab('interviews',this)">💼 Interviews</button>
+    <button class="tab" onclick="showTab('skills',this)">🛠️ Skill Assessments</button>
+    <button class="tab" onclick="showTab('create',this)">➕ Create Program</button>
+  </div>
+
+  <!-- Users Tab -->
+  <div id="tab-users">
+    <div class="card">
+      <h3>👥 Registered Users</h3>
+      <div id="usersContent"><div class="empty-state">Loading users...</div></div>
+    </div>
+  </div>
+
+  <!-- Programs Tab -->
+  <div id="tab-programs" style="display:none">
+    <div class="card">
+      <h3>📋 Training Programs</h3>
+      <div id="programsContent"><div class="empty-state">Loading programs...</div></div>
+    </div>
+  </div>
+
+  <!-- Interviews Tab -->
+  <div id="tab-interviews" style="display:none">
+    <div class="card">
+      <h3>💼 Interview History</h3>
+      <div id="interviewsContent"><div class="empty-state">Loading interviews...</div></div>
+    </div>
+  </div>
+
+  <!-- Skills Tab -->
+  <div id="tab-skills" style="display:none">
+    <div class="card">
+      <h3>🛠️ Skill Assessment Results</h3>
+      <div id="skillsContent"><div class="empty-state">Loading assessments...</div></div>
+    </div>
+  </div>
+
+  <!-- Create Program Tab -->
+  <div id="tab-create" style="display:none">
+    <div class="card">
+      <h3>➕ Create Training Program</h3>
+      <div class="form-group">
+        <label>Program Name *</label>
+        <input type="text" id="progName" placeholder="e.g. Python for Data Analysis">
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea id="progDesc" rows="3" placeholder="Brief description of the training program..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>Topics (comma-separated)</label>
+        <input type="text" id="progTopics" placeholder="e.g. Python Basics, Pandas, Data Visualization">
+      </div>
+      <button class="btn btn-primary" onclick="createProgram()">Create Program</button>
+      <div id="createMsg" style="margin-top:10px;font-size:13px;display:none"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+Chart.defaults.color = '#888';
+Chart.defaults.borderColor = '#2a2a3e';
+Chart.defaults.font.family = "'Inter', sans-serif";
+
+let actChart = null, skChart = null;
+
+function showTab(tab, btn) {
+  document.querySelectorAll('[id^="tab-"]').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + tab).style.display = 'block';
+  btn.classList.add('active');
+  if (tab === 'users') loadUsers();
+  if (tab === 'programs') loadPrograms();
+  if (tab === 'interviews') loadInterviews();
+  if (tab === 'skills') loadSkills();
+}
+
+async function loadDashboard() {
+  const [programs, interviews, skills] = await Promise.all([
+    fetch('/api/training/programs').then(r => r.json()).catch(() => []),
+    fetch('/api/interview/history').then(r => r.json()).catch(() => []),
+    fetch('/api/skill-assessment/history').then(r => r.json()).catch(() => []),
+  ]);
+
+  document.getElementById('statPrograms').textContent = programs.length;
+  document.getElementById('statInterviews').textContent = interviews.length;
+  document.getElementById('statAssessments').textContent = skills.length;
+
+  // Users count from leaderboard
+  const lb = await fetch('/api/leaderboard').then(r => r.json()).catch(() => []);
+  document.getElementById('statUsers').textContent = lb.length;
+
+  renderActivityChart(interviews, skills, programs);
+  renderSkillChart(skills);
+  loadUsers();
+}
+
+function renderActivityChart(interviews, skills, programs) {
+  if (actChart) actChart.destroy();
+  actChart = new Chart(document.getElementById('activityChart'), {
+    type: 'bar',
+    data: {
+      labels: ['Training Programs', 'Interviews', 'Skill Assessments'],
+      datasets: [{
+        label: 'Count',
+        data: [programs.length, interviews.length, skills.length],
+        backgroundColor: ['#AA00FF33','#0099CC33','#FF880033'],
+        borderColor: ['#AA00FF','#0099CC','#FF8800'],
+        borderWidth: 2,
+        borderRadius: 6,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { ticks: { stepSize: 1, color: '#666' }, grid: { color: '#1e1e2e' } },
+        x: { ticks: { color: '#aaa' }, grid: { display: false } }
+      }
+    }
+  });
+}
+
+function renderSkillChart(skills) {
+  if (skChart) skChart.destroy();
+  const catCounts = {};
+  skills.forEach(s => { catCounts[s.category] = (catCounts[s.category] || 0) + 1; });
+  if (!Object.keys(catCounts).length) return;
+
+  const colors = ['#AA00FF','#0099CC','#00C851','#FF8800','#FF4444','#FFBB33'];
+  skChart = new Chart(document.getElementById('skillChart'), {
+    type: 'doughnut',
+    data: {
+      labels: Object.keys(catCounts),
+      datasets: [{
+        data: Object.values(catCounts),
+        backgroundColor: colors.map(c => c + '33'),
+        borderColor: colors,
+        borderWidth: 2,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'right', labels: { color: '#aaa', font: { size: 11 }, boxWidth: 12 } }
+      }
+    }
+  });
+}
+
+async function loadUsers() {
+  const lb = await fetch('/api/leaderboard').then(r => r.json()).catch(() => []);
+  const el = document.getElementById('usersContent');
+  if (!lb.length) { el.innerHTML = '<div class="empty-state">No users found.</div>'; return; }
+  el.innerHTML = `<div style="overflow-x:auto"><table class="data-table">
+    <thead><tr><th>Rank</th><th>Username</th><th>Level</th><th>XP</th><th>Streak</th><th>Accuracy</th></tr></thead>
+    <tbody>${lb.map(u => `<tr>
+      <td style="color:#555">#${u.rank}</td>
+      <td style="font-weight:600">${u.username} ${u.is_me ? '<span class="badge badge-purple">You</span>' : ''}</td>
+      <td><span class="badge badge-blue">${u.level_emoji} ${u.level_name}</span></td>
+      <td style="color:#AA00FF;font-weight:700">${u.xp} XP</td>
+      <td style="color:#FF8800">🔥 ${u.streak} days</td>
+      <td style="color:${u.accuracy>=75?'#00C851':u.accuracy>=50?'#FF8800':'#FF4444'}">${u.accuracy}%</td>
+    </tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+async function loadPrograms() {
+  const programs = await fetch('/api/training/programs').then(r => r.json()).catch(() => []);
+  const el = document.getElementById('programsContent');
+  if (!programs.length) {
+    el.innerHTML = '<div class="empty-state">No training programs yet. Create one using the "Create Program" tab.</div>';
+    return;
+  }
+  el.innerHTML = `<div style="overflow-x:auto"><table class="data-table">
+    <thead><tr><th>ID</th><th>Program Name</th><th>Topics</th><th>Created</th></tr></thead>
+    <tbody>${programs.map(p => `<tr>
+      <td style="color:#555">#${p.id}</td>
+      <td style="font-weight:600">${p.name}</td>
+      <td style="color:#aaa;font-size:12px">${p.topics || 'General'}</td>
+      <td style="color:#555">${(p.created_at||'').substring(0,10)}</td>
+    </tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+async function loadInterviews() {
+  const interviews = await fetch('/api/interview/history').then(r => r.json()).catch(() => []);
+  const el = document.getElementById('interviewsContent');
+  if (!interviews.length) { el.innerHTML = '<div class="empty-state">No interviews taken yet.</div>'; return; }
+  el.innerHTML = `<div style="overflow-x:auto"><table class="data-table">
+    <thead><tr><th>ID</th><th>Job Role</th><th>Type</th><th>Answered</th><th>Status</th><th>Date</th><th></th></tr></thead>
+    <tbody>${interviews.map(iv => `<tr>
+      <td style="color:#555">#${iv.id}</td>
+      <td style="font-weight:600">${iv.job_role}</td>
+      <td style="color:#aaa">${iv.interview_type}</td>
+      <td>${iv.answered}/${iv.total_questions}</td>
+      <td><span class="badge ${iv.answered>0?'badge-green':'badge-orange'}">${iv.answered>0?'Completed':'In Progress'}</span></td>
+      <td style="color:#555">${(iv.created_at||'').substring(0,10)}</td>
+      <td>${iv.answered>0?`<a href="/interview-report/${iv.id}" class="btn btn-outline" style="text-decoration:none">Report</a>`:''}</td>
+    </tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+async function loadSkills() {
+  const skills = await fetch('/api/skill-assessment/history').then(r => r.json()).catch(() => []);
+  const el = document.getElementById('skillsContent');
+  if (!skills.length) { el.innerHTML = '<div class="empty-state">No skill assessments completed yet.</div>'; return; }
+  el.innerHTML = `<div style="overflow-x:auto"><table class="data-table">
+    <thead><tr><th>Category</th><th>Score</th><th>Correct</th><th>Total</th><th>Level</th><th>Date</th></tr></thead>
+    <tbody>${skills.map(s => {
+      const lvl = s.score>=75?'Strong':s.score>=50?'Medium':'Needs Practice';
+      const cls = s.score>=75?'badge-green':s.score>=50?'badge-orange':'badge-red';
+      return `<tr>
+        <td style="font-weight:600">${s.category}</td>
+        <td style="color:${s.score>=75?'#00C851':s.score>=50?'#FF8800':'#FF4444'};font-weight:700">${s.score}%</td>
+        <td>${s.correct_q}</td>
+        <td>${s.total_q}</td>
+        <td><span class="badge ${cls}">${lvl}</span></td>
+        <td style="color:#555">${(s.assessed_at||'').substring(0,10)}</td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table></div>`;
+}
+
+async function createProgram() {
+  const name = document.getElementById('progName').value.trim();
+  const desc = document.getElementById('progDesc').value.trim();
+  const topics = document.getElementById('progTopics').value.trim();
+  if (!name) { alert('Program name is required.'); return; }
+  const res = await fetch('/api/training/create', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({name, description: desc, topics})
+  }).then(r => r.json());
+  const msg = document.getElementById('createMsg');
+  msg.style.display = 'block';
+  if (res.status === 'created') {
+    msg.style.color = '#00C851';
+    msg.textContent = '✅ Program created! ID: ' + res.program_id;
+    document.getElementById('progName').value = '';
+    document.getElementById('progDesc').value = '';
+    document.getElementById('progTopics').value = '';
+    document.getElementById('statPrograms').textContent =
+      parseInt(document.getElementById('statPrograms').textContent || 0) + 1;
+  } else {
+    msg.style.color = '#FF4444';
+    msg.textContent = '❌ Error: ' + (res.error || 'Unknown error');
+  }
+}
+
+loadDashboard();
+</script>
+</body>
+</html>

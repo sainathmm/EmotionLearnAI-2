@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EmotionLearnAI — AI Interview Assessment</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Inter',sans-serif}
+body{background:#0f0f1a;color:#fff;min-height:100vh;display:flex;flex-direction:column}
+.header{background:linear-gradient(135deg,#1a1a2e,#16213e);padding:15px 30px;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #0099CC}
+.logo{font-size:22px;font-weight:700;color:#0099CC}
+.logo span{color:#fff}
+.nav-links{display:flex;gap:10px;align-items:center}
+.nav-links a{padding:6px 14px;border:1px solid #333;border-radius:8px;color:#aaa;font-size:12px;text-decoration:none;transition:all 0.2s}
+.nav-links a:hover{border-color:#0099CC;color:#0099CC}
+
+.main{max-width:900px;margin:0 auto;padding:30px 20px;width:100%}
+.page-title{font-size:28px;font-weight:800;margin-bottom:6px}
+.page-title span{color:#0099CC}
+.page-sub{font-size:14px;color:#aaa;margin-bottom:30px}
+
+.card{background:#1a1a2e;border:1px solid #2a2a3e;border-radius:14px;padding:24px;margin-bottom:20px}
+.card h3{font-size:16px;font-weight:700;margin-bottom:16px;color:#0099CC}
+
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.form-group{display:flex;flex-direction:column;gap:6px}
+.form-group label{font-size:13px;color:#aaa;font-weight:600}
+.form-group select,.form-group input{padding:10px 14px;background:#0d1117;border:1px solid #333;border-radius:8px;color:#fff;font-size:13px;outline:none}
+.form-group select:focus,.form-group input:focus{border-color:#0099CC}
+
+.btn{padding:10px 24px;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.2s}
+.btn-primary{background:#0099CC;color:#fff}
+.btn-primary:hover{background:#007aa3}
+.btn-secondary{background:#1a1a2e;border:1px solid #333;color:#aaa}
+.btn-secondary:hover{border-color:#0099CC;color:#0099CC}
+
+/* Interview session */
+#interviewSession{display:none}
+.progress-bar{background:#0d1117;border-radius:8px;height:8px;margin-bottom:20px;overflow:hidden}
+.progress-fill{height:8px;background:linear-gradient(90deg,#0099CC,#00C851);border-radius:8px;transition:width 0.4s}
+.q-counter{font-size:13px;color:#aaa;margin-bottom:8px}
+.q-text{font-size:18px;font-weight:700;margin-bottom:20px;line-height:1.5}
+.answer-area{width:100%;min-height:120px;padding:14px;background:#0d1117;border:1px solid #333;border-radius:10px;color:#fff;font-size:14px;resize:vertical;outline:none;line-height:1.6}
+.answer-area:focus{border-color:#0099CC}
+.answer-meta{display:flex;align-items:center;justify-content:space-between;margin-top:10px;font-size:12px;color:#555}
+
+/* Camera panel */
+.cam-panel{background:#0d1117;border:1px solid #222;border-radius:10px;padding:12px;margin-bottom:16px}
+.cam-panel h4{font-size:12px;color:#555;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px}
+#iVideo{width:100%;max-width:240px;border-radius:6px;background:#000;height:140px;object-fit:cover;display:block}
+.cam-stats{display:flex;gap:12px;margin-top:8px;font-size:11px}
+.cam-stat{display:flex;flex-direction:column;gap:2px}
+.cam-stat span{color:#555}
+.cam-stat b{color:#0099CC}
+
+/* Score feedback */
+.score-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700}
+.score-high{background:#00C85122;color:#00C851;border:1px solid #00C85144}
+.score-mid{background:#FF880022;color:#FF8800;border:1px solid #FF880044}
+.score-low{background:#FF444422;color:#FF4444;border:1px solid #FF444444}
+
+/* Report */
+#reportSection{display:none}
+.report-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px}
+.report-stat{background:#0d1117;border-radius:10px;padding:16px;text-align:center;border:1px solid #222}
+.report-stat .val{font-size:28px;font-weight:800;color:#0099CC}
+.report-stat .lbl{font-size:12px;color:#555;margin-top:4px}
+.answer-review{background:#0d1117;border-radius:8px;padding:14px;margin-bottom:10px;border-left:3px solid #0099CC}
+.answer-review .q{font-size:13px;font-weight:600;margin-bottom:6px}
+.answer-review .a{font-size:12px;color:#aaa;margin-bottom:6px}
+.answer-review .fb{font-size:12px;color:#FFBB33}
+.skill-gap-list{display:flex;flex-direction:column;gap:8px}
+.skill-item{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#0d1117;border-radius:8px;font-size:13px}
+.skill-status{padding:2px 10px;border-radius:12px;font-size:11px;font-weight:700}
+.status-strong{background:#00C85122;color:#00C851}
+.status-medium{background:#FF880022;color:#FF8800}
+.status-weak{background:#FF444422;color:#FF4444}
+.status-na{background:#33333322;color:#666}
+
+.privacy-note{background:#0099CC11;border:1px solid #0099CC33;border-radius:8px;padding:12px;font-size:12px;color:#aaa;line-height:1.6;margin-bottom:20px}
+.privacy-note strong{color:#0099CC}
+
+/* ── Low-Attention Warning Floating Popup ── */
+.attention-warning-toast {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  max-width: 400px;
+  width: calc(100% - 48px);
+  background: #1a1626;
+  border: 1px solid #ffaa00;
+  border-left: 5px solid #ffaa00;
+  border-radius: 12px;
+  padding: 16px 18px;
+  box-shadow: 0 16px 36px rgba(0,0,0,0.65), 0 0 20px rgba(255,170,0,0.22);
+  z-index: 1050;
+  display: none;
+  animation: slideInAttentionToast 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: auto;
+}
+.attention-warning-toast.show {
+  display: block;
+}
+@keyframes slideInAttentionToast {
+  from { opacity: 0; transform: translateY(-16px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.attention-warning-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.attention-warning-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffbb33;
+}
+.attention-warning-dismiss {
+  background: transparent;
+  border: none;
+  color: #888;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 2px 8px;
+  border-radius: 6px;
+  line-height: 1;
+  transition: color 0.15s, background 0.15s;
+}
+.attention-warning-dismiss:hover {
+  color: #fff;
+  background: #2a253a;
+}
+.attention-warning-body {
+  font-size: 13px;
+  color: #e0e0e0;
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+.attention-warning-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #888;
+  gap: 12px;
+}
+.attention-warning-btn {
+  background: #ffaa0022;
+  border: 1px solid #ffaa0066;
+  color: #ffbb33;
+  padding: 5px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.attention-warning-btn:hover {
+  background: #ffaa00;
+  color: #000;
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">🧠 Emotion<span>LearnAI</span> <span style="color:#0099CC;font-size:14px;font-weight:600">— Interview Assessment</span></div>
+  <div class="nav-links">
+    <a href="/select-role">🏠 Home</a>
+    <a href="/">📚 Student Learning</a>
+    <a href="/candidate-dashboard">📊 My Results</a>
+    <a href="/logout">Logout</a>
+  </div>
+</div>
+
+<div class="main">
+  <div class="page-title">💼 AI <span>Interview Assessment</span></div>
+  <div class="page-sub">Practice HR, Technical, and Behavioral interviews with AI-powered evaluation.</div>
+
+  <div class="privacy-note">
+    <strong>Privacy Notice:</strong> Camera is used only as an auxiliary behavioral indicator during your interview. Facial emotion and attention signals are <strong>NOT</strong> used to accept or reject candidates. Your technical knowledge, communication quality, and answer relevance are the primary assessment factors. You may stop the camera at any time.
+  </div>
+
+  <!-- Low Attention Warning Popup (Non-blocking reminder) -->
+  <div id="attentionWarningToast" class="attention-warning-toast" role="alert" aria-live="polite">
+    <div class="attention-warning-header">
+      <div class="attention-warning-title">⚠️ Stay Focused!</div>
+      <button type="button" class="attention-warning-dismiss" onclick="dismissAttentionWarning()" aria-label="Dismiss warning" title="Dismiss (Esc)">✕</button>
+    </div>
+    <div class="attention-warning-body">
+      Your attention appears low. Please refocus and continue answering. Your interview section may end when the timer expires.
+    </div>
+    <div class="attention-warning-footer">
+      <span>Auxiliary indicator only — not used to reject candidates</span>
+      <button type="button" class="attention-warning-btn" onclick="dismissAttentionWarning()">Got it</button>
+    </div>
+  </div>
+
+  <!-- Setup -->
+  <div class="card" id="setupCard">
+    <h3>⚙️ Interview Setup</h3>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Job Role</label>
+        <select id="jobRole">
+          {% for role in job_roles %}
+          <option value="{{ role }}">{{ role }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Interview Type</label>
+        <select id="interviewType">
+          <option value="Technical Interview">Technical Interview</option>
+          <option value="HR Interview">HR Interview</option>
+          <option value="Behavioral Interview">Behavioral Interview</option>
+          <option value="Communication Assessment">Communication Assessment</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center">
+      <button class="btn btn-primary" onclick="startInterview()">🚀 Start Interview</button>
+      <label style="font-size:13px;color:#aaa;display:flex;align-items:center;gap:6px;cursor:pointer">
+        <input type="checkbox" id="enableCamera" checked style="accent-color:#0099CC"> Enable Camera (optional)
+      </label>
+    </div>
+  </div>
+
+  <!-- Interview Session -->
+  <div id="interviewSession">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div>
+          <span id="sessionRole" style="font-size:13px;color:#0099CC;font-weight:600"></span>
+          <span style="color:#555;margin:0 8px">|</span>
+          <span id="sessionType" style="font-size:13px;color:#aaa"></span>
+        </div>
+        <div class="q-counter">Question <span id="qNum">1</span> of <span id="qTotal">5</span></div>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+
+      <div style="display:grid;grid-template-columns:1fr 220px;gap:20px">
+        <div>
+          <div class="q-text" id="questionText">Loading question...</div>
+          <textarea class="answer-area" id="answerText" placeholder="Type your answer here... Take your time, there is no rush."></textarea>
+          <div class="answer-meta">
+            <span id="timerDisplay">⏱ 0s</span>
+            <span id="wordCount">0 words</span>
+          </div>
+          <div style="margin-top:14px;display:flex;gap:10px">
+            <button class="btn btn-primary" id="submitBtn" onclick="submitAnswer()">Submit Answer →</button>
+            <button class="btn btn-secondary" id="skipBtn" onclick="skipQuestion()">Skip</button>
+          </div>
+          <div id="answerFeedback" style="display:none;margin-top:14px;padding:12px;background:#0d1117;border-radius:8px;border-left:3px solid #0099CC"></div>
+        </div>
+        <div>
+          <div class="cam-panel">
+            <h4>📷 Behavioral Signals (Auxiliary)</h4>
+            <video id="iVideo" autoplay muted playsinline></video>
+            <canvas id="iCanvas" style="display:none"></canvas>
+            <div class="cam-stats">
+              <div class="cam-stat"><span>Emotion</span><b id="camEmotion">--</b></div>
+              <div class="cam-stat"><span>Attention</span><b id="camAttention">--</b></div>
+            </div>
+            <div style="font-size:10px;color:#444;margin-top:6px">Auxiliary indicator only — not used for hiring decisions</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Report -->
+  <div id="reportSection">
+    <div class="card">
+      <h3>📋 Interview Report</h3>
+      <div class="report-grid">
+        <div class="report-stat"><div class="val" id="rScore">--</div><div class="lbl">Average Score /10</div></div>
+        <div class="report-stat"><div class="val" id="rQuestions">--</div><div class="lbl">Questions Answered</div></div>
+        <div class="report-stat"><div class="val" id="rTime">--</div><div class="lbl">Avg Response Time (s)</div></div>
+      </div>
+      <div id="answersReview"></div>
+    </div>
+    <div class="card">
+      <h3>🛠️ Skill Gap Analysis — <span id="rRole"></span></h3>
+      <div id="skillGapList" class="skill-gap-list"></div>
+      <div id="skillRec" style="margin-top:14px;padding:12px;background:#0099CC11;border:1px solid #0099CC33;border-radius:8px;font-size:13px;color:#aaa"></div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:10px">
+      <button class="btn btn-primary" onclick="location.reload()">🔄 New Interview</button>
+      <a href="/candidate-dashboard" class="btn btn-secondary" style="text-decoration:none;display:inline-flex;align-items:center">📊 View Dashboard</a>
+    </div>
+  </div>
+</div>
+
+<script>
+let interviewId = null;
+let questions = [];
+let currentQ = 0;
+let qStartTime = Date.now();
+let timerInterval = null;
+let camStream = null;
+let camInterval = null;
+let currentEmotion = 'neutral';
+let currentAttention = 75;
+
+// ── Low-Attention Warning Configuration (Part 2) ──
+const ATTENTION_WARNING_THRESHOLD = 30; // Triggers when attention < 30%
+const LOW_ATTENTION_TRIGGER_MS = 5000;   // Requires 5 seconds continuous low attention
+const WARNING_COOLDOWN_MS = 30000;       // 30 seconds cooldown between popup displays
+
+let lowAttentionStartTime = null;
+let lastWarningDismissTime = 0;
+let isWarningActive = false;
+let interviewEnded = false;
+
+function checkAttentionWarning(attentionScore) {
+  // Suppress warning if interview ended, camera inactive, or score is missing/invalid
+  if (interviewEnded || !camStream || typeof attentionScore !== 'number' || isNaN(attentionScore)) {
+    lowAttentionStartTime = null;
+    return;
+  }
+
+  const now = Date.now();
+
+  if (attentionScore < ATTENTION_WARNING_THRESHOLD) {
+    if (lowAttentionStartTime === null) {
+      lowAttentionStartTime = now;
+    } else if (now - lowAttentionStartTime >= LOW_ATTENTION_TRIGGER_MS) {
+      // Trigger criteria met: attention remained low for >= 5 seconds
+      if (!isWarningActive && (now - lastWarningDismissTime >= WARNING_COOLDOWN_MS)) {
+        showAttentionWarning();
+      }
+    }
+  } else {
+    // Attention recovered to or above threshold: reset trigger timer
+    lowAttentionStartTime = null;
+  }
+}
+
+function showAttentionWarning() {
+  const toast = document.getElementById('attentionWarningToast');
+  if (toast) {
+    toast.classList.add('show');
+    isWarningActive = true;
+  }
+}
+
+function dismissAttentionWarning() {
+  const toast = document.getElementById('attentionWarningToast');
+  if (toast) {
+    toast.classList.remove('show');
+  }
+  isWarningActive = false;
+  lastWarningDismissTime = Date.now();
+  lowAttentionStartTime = null;
+}
+
+// Allow Esc key to dismiss warning
+window.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape' && isWarningActive) {
+    dismissAttentionWarning();
+  }
+});
+
+document.getElementById('answerText').addEventListener('input', function() {
+  const words = this.value.trim().split(/\s+/).filter(w => w).length;
+  document.getElementById('wordCount').textContent = words + ' words';
+});
+
+async function startInterview() {
+  const jobRole = document.getElementById('jobRole').value;
+  const interviewType = document.getElementById('interviewType').value;
+  const enableCam = document.getElementById('enableCamera').checked;
+
+  const res = await fetch('/api/interview/start', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({job_role: jobRole, interview_type: interviewType})
+  }).then(r => r.json());
+
+  if (res.error) { alert('Error: ' + res.error); return; }
+
+  interviewId = res.interview_id;
+  questions = res.questions;
+  currentQ = 0;
+
+  document.getElementById('setupCard').style.display = 'none';
+  document.getElementById('interviewSession').style.display = 'block';
+  document.getElementById('sessionRole').textContent = jobRole;
+  document.getElementById('sessionType').textContent = interviewType;
+  document.getElementById('qTotal').textContent = questions.length;
+
+  if (enableCam) startCamera();
+  loadQuestion();
+}
+
+function loadQuestion() {
+  if (currentQ >= questions.length) { finishInterview(); return; }
+  const q = questions[currentQ];
+  document.getElementById('questionText').textContent = q;
+  document.getElementById('answerText').value = '';
+  document.getElementById('wordCount').textContent = '0 words';
+  document.getElementById('answerFeedback').style.display = 'none';
+  document.getElementById('qNum').textContent = currentQ + 1;
+  document.getElementById('progressFill').style.width = ((currentQ / questions.length) * 100) + '%';
+  qStartTime = Date.now();
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    const secs = Math.round((Date.now() - qStartTime) / 1000);
+    document.getElementById('timerDisplay').textContent = '⏱ ' + secs + 's';
+  }, 1000);
+}
+
+async function submitAnswer() {
+  const answer = document.getElementById('answerText').value.trim();
+  if (!answer) { alert('Please type your answer before submitting.'); return; }
+  const timeTaken = Math.round((Date.now() - qStartTime) / 1000);
+  clearInterval(timerInterval);
+
+  const res = await fetch('/api/interview/answer', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      interview_id: interviewId,
+      question_no: currentQ + 1,
+      question_text: questions[currentQ],
+      user_answer: answer,
+      time_taken: timeTaken,
+      emotion: currentEmotion,
+      attention: currentAttention,
+    })
+  }).then(r => r.json());
+
+  const fb = document.getElementById('answerFeedback');
+  fb.style.display = 'block';
+  const scoreClass = res.score >= 7 ? 'score-high' : res.score >= 4 ? 'score-mid' : 'score-low';
+  fb.innerHTML = `<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+    <span class="score-badge ${scoreClass}">Score: ${res.score}/10</span>
+  </div>
+  <div style="font-size:13px;color:#aaa">${res.feedback}</div>`;
+
+  setTimeout(() => { currentQ++; loadQuestion(); }, 2500);
+}
+
+function skipQuestion() {
+  clearInterval(timerInterval);
+  currentQ++;
+  loadQuestion();
+}
+
+async function finishInterview() {
+  clearInterval(timerInterval);
+  interviewEnded = true;
+  dismissAttentionWarning();
+  if (camStream) { camStream.getTracks().forEach(t => t.stop()); clearInterval(camInterval); }
+  document.getElementById('interviewSession').style.display = 'none';
+
+  const res = await fetch('/api/interview/report/' + interviewId).then(r => r.json());
+  if (res.error) { alert('Could not load report.'); return; }
+
+  document.getElementById('reportSection').style.display = 'block';
+  document.getElementById('rScore').textContent = res.summary.avg_score;
+  document.getElementById('rQuestions').textContent = res.summary.total_questions;
+  document.getElementById('rTime').textContent = res.summary.avg_time;
+  document.getElementById('rRole').textContent = res.interview.job_role;
+
+  const reviewEl = document.getElementById('answersReview');
+  reviewEl.innerHTML = '<h4 style="font-size:14px;color:#aaa;margin-bottom:12px">Answer Review</h4>';
+  (res.answers || []).forEach((a, i) => {
+    const scoreClass = a.score >= 0.7 ? 'score-high' : a.score >= 0.4 ? 'score-mid' : 'score-low';
+    reviewEl.innerHTML += `<div class="answer-review">
+      <div class="q">Q${i+1}: ${a.question_text}</div>
+      <div class="a">${a.user_answer.substring(0, 200)}${a.user_answer.length > 200 ? '...' : ''}</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="score-badge ${scoreClass}">Score: ${Math.round(a.score*10)}/10</span>
+        <span class="fb">${a.feedback}</span>
+      </div>
+    </div>`;
+  });
+
+  const gapEl = document.getElementById('skillGapList');
+  gapEl.innerHTML = '';
+  const gap = res.skill_gap;
+  (gap.required || []).forEach(skill => {
+    gapEl.innerHTML += `<div class="skill-item">
+      <span>${skill}</span>
+      <span class="skill-status status-na">Required</span>
+    </div>`;
+  });
+  document.getElementById('skillRec').textContent = '💡 ' + gap.recommendation;
+}
+
+async function startCamera() {
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({video: {width:320, height:240}});
+    document.getElementById('iVideo').srcObject = camStream;
+    camInterval = setInterval(captureFrame, 3000);
+  } catch(e) {
+    console.log('Camera not available:', e);
+  }
+}
+
+async function captureFrame() {
+  if (!camStream) return;
+  const v = document.getElementById('iVideo');
+  const c = document.getElementById('iCanvas');
+  c.width = v.videoWidth || 320;
+  c.height = v.videoHeight || 240;
+  c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
+  const frame = c.toDataURL('image/jpeg', 0.7);
+  try {
+    const res = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({session_id: 'interview_' + interviewId, frame})
+    }).then(r => r.json());
+    if (res.emotion) {
+      currentEmotion = res.emotion.emotion || 'neutral';
+      document.getElementById('camEmotion').textContent = currentEmotion;
+    }
+    if (res.attention) {
+      const score = res.attention.attention_score;
+      if (typeof score === 'number') {
+        currentAttention = score;
+        document.getElementById('camAttention').textContent = currentAttention + '%';
+        checkAttentionWarning(currentAttention);
+      }
+    }
+  } catch(e) {}
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EmotionLearnAI — Recruiter Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Inter',sans-serif}
+body{background:#0f0f1a;color:#fff;min-height:100vh;display:flex;flex-direction:column}
+.header{background:linear-gradient(135deg,#1a1a2e,#16213e);padding:15px 30px;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #FFBB33;position:sticky;top:0;z-index:100}
+.logo{font-size:22px;font-weight:700;color:#FFBB33}
+.logo span{color:#fff}
+.nav-links{display:flex;gap:10px;align-items:center}
+.nav-links a{padding:6px 14px;border:1px solid #333;border-radius:8px;color:#aaa;font-size:12px;text-decoration:none;transition:all 0.2s}
+.nav-links a:hover{border-color:#FFBB33;color:#FFBB33}
+.main{max-width:1200px;margin:0 auto;padding:30px 20px;width:100%}
+.page-title{font-size:28px;font-weight:800;margin-bottom:6px}
+.page-title span{color:#FFBB33}
+.page-sub{font-size:14px;color:#aaa;margin-bottom:30px}
+
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px}
+.stat-card{background:#1a1a2e;border:1px solid #2a2a3e;border-radius:12px;padding:20px;text-align:center;position:relative;overflow:hidden}
+.stat-card::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%;border-radius:12px 0 0 12px}
+.stat-card.yellow::before{background:#FFBB33}
+.stat-card.blue::before{background:#0099CC}
+.stat-card.green::before{background:#00C851}
+.stat-card.orange::before{background:#FF8800}
+.stat-val{font-size:32px;font-weight:800}
+.stat-card.yellow .stat-val{color:#FFBB33}
+.stat-card.blue .stat-val{color:#0099CC}
+.stat-card.green .stat-val{color:#00C851}
+.stat-card.orange .stat-val{color:#FF8800}
+.stat-lbl{font-size:12px;color:#555;margin-top:4px}
+
+.card{background:#1a1a2e;border:1px solid #2a2a3e;border-radius:14px;padding:24px;margin-bottom:20px}
+.card h3{font-size:16px;font-weight:700;margin-bottom:16px;color:#FFBB33}
+
+.section-label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#555;margin:24px 0 12px}
+
+/* Candidate table */
+.cand-table{width:100%;border-collapse:collapse;font-size:13px}
+.cand-table th{text-align:left;padding:10px 14px;color:#555;font-weight:600;border-bottom:1px solid #2a2a3e;font-size:12px;text-transform:uppercase;letter-spacing:0.5px}
+.cand-table td{padding:10px 14px;border-bottom:1px solid #1a1a2e;vertical-align:middle}
+.cand-table tr:hover td{background:#1e1e30}
+.cand-table tr:last-child td{border-bottom:none}
+
+.score-badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.score-high{background:#00C85122;color:#00C851;border:1px solid #00C85144}
+.score-mid{background:#FF880022;color:#FF8800;border:1px solid #FF880044}
+.score-low{background:#FF444422;color:#FF4444;border:1px solid #FF444444}
+.score-na{background:#33333322;color:#666;border:1px solid #33333344}
+
+.btn{padding:6px 14px;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.2s;text-decoration:none;display:inline-block}
+.btn-primary{background:#FFBB33;color:#000}
+.btn-primary:hover{background:#e6a800}
+.btn-outline{background:transparent;border:1px solid #333;color:#aaa}
+.btn-outline:hover{border-color:#FFBB33;color:#FFBB33}
+
+/* Skill match bar */
+.skill-match-row{display:flex;align-items:center;gap:12px;margin-bottom:10px;font-size:13px}
+.skill-match-name{width:160px;color:#aaa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.skill-track{flex:1;background:#0d1117;border-radius:6px;height:8px;overflow:hidden}
+.skill-fill{height:8px;border-radius:6px;transition:width 0.5s}
+.skill-pct{width:40px;text-align:right;font-size:12px;color:#aaa}
+
+/* Role filter */
+.filter-bar{display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
+.filter-bar label{font-size:13px;color:#aaa}
+.filter-bar select{padding:7px 12px;background:#0d1117;border:1px solid #333;border-radius:8px;color:#fff;font-size:13px;outline:none}
+.filter-bar select:focus{border-color:#FFBB33}
+
+/* Comparison panel */
+.compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.compare-card{background:#0d1117;border:1px solid #2a2a3e;border-radius:10px;padding:16px}
+.compare-card h4{font-size:14px;font-weight:700;margin-bottom:12px;color:#FFBB33}
+.compare-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #1a1a2e;font-size:13px}
+.compare-row:last-child{border:none}
+
+.empty-state{text-align:center;padding:40px;color:#555}
+.privacy-note{background:#FFBB3311;border:1px solid #FFBB3333;border-radius:8px;padding:12px;font-size:12px;color:#aaa;line-height:1.6;margin-bottom:20px}
+.privacy-note strong{color:#FFBB33}
+
+.chart-wrap{position:relative;height:220px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">🧠 Emotion<span>LearnAI</span> <span style="color:#FFBB33;font-size:14px;font-weight:600">— Recruiter Dashboard</span></div>
+  <div class="nav-links">
+    <a href="/select-role">🏠 Platform Hub</a>
+    <a href="/interview">💼 Interviews</a>
+    <a href="/skill-assessment">🛠️ Skill Tests</a>
+    <a href="/candidate-dashboard">👤 Candidate View</a>
+    <a href="/logout">Logout</a>
+  </div>
+</div>
+
+<div class="main">
+  <div class="page-title">🔍 Recruiter <span>Dashboard</span></div>
+  <div class="page-sub">Review candidate assessments, compare job-role skill matches, and generate hiring insights.</div>
+
+  <div class="privacy-note">
+    <strong>Fair Assessment Notice:</strong> Emotion and attention signals are <strong>auxiliary behavioural indicators only</strong> and are <strong>NOT</strong> used to accept or reject candidates. All hiring decisions must be based on technical knowledge, communication quality, problem-solving ability, and job-relevant assessment scores.
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-grid">
+    <div class="stat-card yellow"><div class="stat-val" id="totalCandidates">0</div><div class="stat-lbl">Total Candidates</div></div>
+    <div class="stat-card blue"><div class="stat-val" id="totalInterviews">0</div><div class="stat-lbl">Interviews Completed</div></div>
+    <div class="stat-card green"><div class="stat-val" id="avgScore">--</div><div class="stat-lbl">Avg Interview Score</div></div>
+    <div class="stat-card orange"><div class="stat-val" id="skillAssessments">0</div><div class="stat-lbl">Skill Assessments</div></div>
+  </div>
+
+  <!-- Candidate List -->
+  <div class="card">
+    <h3>👥 Candidate Assessment Results</h3>
+    <div class="filter-bar">
+      <label>Filter by Job Role:</label>
+      <select id="roleFilter" onchange="filterCandidates()">
+        <option value="">All Roles</option>
+        <option>Software Developer</option>
+        <option>Frontend Developer</option>
+        <option>Backend Developer</option>
+        <option>Full Stack Developer</option>
+        <option>Data Analyst</option>
+        <option>Data Scientist</option>
+        <option>Cybersecurity Analyst</option>
+        <option>Cloud Engineer</option>
+      </select>
+      <label>Sort by:</label>
+      <select id="sortBy" onchange="filterCandidates()">
+        <option value="score_desc">Score (High → Low)</option>
+        <option value="score_asc">Score (Low → High)</option>
+        <option value="date_desc">Date (Newest)</option>
+      </select>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="cand-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Candidate</th>
+            <th>Job Role</th>
+            <th>Interview Type</th>
+            <th>Score /10</th>
+            <th>Questions</th>
+            <th>Avg Time</th>
+            <th>Date</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="candidateTableBody">
+          <tr><td colspan="9" class="empty-state">Loading candidates...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Score Distribution Chart -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
+    <div class="card" style="margin-bottom:0">
+      <h3>📊 Score Distribution</h3>
+      <div class="chart-wrap"><canvas id="scoreChart"></canvas></div>
+    </div>
+    <div class="card" style="margin-bottom:0">
+      <h3>💼 Interviews by Job Role</h3>
+      <div class="chart-wrap"><canvas id="roleChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Job Role Skill Match -->
+  <div class="card">
+    <h3>🛠️ Job Role Skill Coverage</h3>
+    <div class="filter-bar">
+      <label>Select Role:</label>
+      <select id="skillRoleSelect" onchange="loadSkillCoverage()">
+        <option>Software Developer</option>
+        <option>Frontend Developer</option>
+        <option>Backend Developer</option>
+        <option>Full Stack Developer</option>
+        <option>Data Analyst</option>
+        <option>Data Scientist</option>
+        <option>Cybersecurity Analyst</option>
+        <option>Cloud Engineer</option>
+      </select>
+    </div>
+    <div id="skillCoverageContent"><div class="empty-state">Select a role to view skill coverage.</div></div>
+  </div>
+
+  <!-- Candidate Comparison -->
+  <div class="card">
+    <h3>⚖️ Candidate Comparison</h3>
+    <p style="font-size:13px;color:#aaa;margin-bottom:16px">Compare the two most recent candidates for the selected role. Primary factors: technical score, communication, problem-solving.</p>
+    <div id="comparisonContent"><div class="empty-state">Complete at least 2 interviews to enable comparison.</div></div>
+  </div>
+</div>
+
+<script>
+Chart.defaults.color = '#888';
+Chart.defaults.borderColor = '#2a2a3e';
+Chart.defaults.font.family = "'Inter', sans-serif";
+
+let allInterviews = [];
+let allReports = [];
+let scoreChart = null, roleChart = null;
+
+async function loadDashboard() {
+  // Load all interviews from the current user's history
+  // In a real recruiter system this would be all candidates; here we show the logged-in user's data
+  allInterviews = await fetch('/api/interview/history').then(r => r.json()).catch(() => []);
+
+  // Load reports for completed interviews
+  const completed = allInterviews.filter(iv => iv.answered > 0);
+  allReports = [];
+  for (const iv of completed.slice(0, 20)) {
+    try {
+      const rpt = await fetch('/api/interview/report/' + iv.id).then(r => r.json());
+      if (rpt && !rpt.error) allReports.push({ interview: iv, report: rpt });
+    } catch(e) {}
+  }
+
+  // Stats
+  document.getElementById('totalCandidates').textContent = allInterviews.length;
+  document.getElementById('totalInterviews').textContent = completed.length;
+
+  const scores = allReports.map(r => r.report.summary.avg_score).filter(s => s > 0);
+  document.getElementById('avgScore').textContent = scores.length
+    ? (scores.reduce((a,b) => a+b, 0) / scores.length).toFixed(1) + '/10'
+    : '--';
+
+  const skillData = await fetch('/api/skill-assessment/history').then(r => r.json()).catch(() => []);
+  document.getElementById('skillAssessments').textContent = skillData.length;
+
+  renderTable(allReports);
+  renderCharts(allReports);
+  loadSkillCoverage();
+  renderComparison(allReports);
+}
+
+function filterCandidates() {
+  const role = document.getElementById('roleFilter').value;
+  const sort = document.getElementById('sortBy').value;
+
+  let filtered = allReports.filter(r => !role || r.interview.job_role === role);
+
+  if (sort === 'score_desc') filtered.sort((a,b) => b.report.summary.avg_score - a.report.summary.avg_score);
+  else if (sort === 'score_asc') filtered.sort((a,b) => a.report.summary.avg_score - b.report.summary.avg_score);
+  else filtered.sort((a,b) => new Date(b.interview.created_at) - new Date(a.interview.created_at));
+
+  renderTable(filtered);
+}
+
+function renderTable(data) {
+  const tbody = document.getElementById('candidateTableBody');
+  if (!data.length) {
+    tbody.innerHTML = '<tr><td colspan="9" class="empty-state">No interview data found. Candidates need to complete interviews first.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = '';
+  data.forEach((item, i) => {
+    const iv = item.interview;
+    const rpt = item.report;
+    const sc = rpt.summary.avg_score;
+    const cls = sc >= 7 ? 'score-high' : sc >= 4 ? 'score-mid' : 'score-low';
+    tbody.innerHTML += `<tr>
+      <td style="color:#555">${i+1}</td>
+      <td style="font-weight:600">Candidate #${iv.user_id || iv.id}</td>
+      <td>${iv.job_role}</td>
+      <td style="color:#aaa">${iv.interview_type}</td>
+      <td><span class="score-badge ${cls}">${sc}/10</span></td>
+      <td style="color:#aaa">${rpt.summary.total_questions}</td>
+      <td style="color:#aaa">${rpt.summary.avg_time}s</td>
+      <td style="color:#555">${(iv.created_at||'').substring(0,10)}</td>
+      <td><a href="/interview-report/${iv.id}" class="btn btn-primary" style="text-decoration:none">View Report</a></td>
+    </tr>`;
+  });
+}
+
+function renderCharts(data) {
+  // Score distribution
+  const buckets = {'0-3': 0, '4-6': 0, '7-8': 0, '9-10': 0};
+  data.forEach(r => {
+    const sc = r.report.summary.avg_score;
+    if (sc <= 3) buckets['0-3']++;
+    else if (sc <= 6) buckets['4-6']++;
+    else if (sc <= 8) buckets['7-8']++;
+    else buckets['9-10']++;
+  });
+
+  if (scoreChart) scoreChart.destroy();
+  scoreChart = new Chart(document.getElementById('scoreChart'), {
+    type: 'bar',
+    data: {
+      labels: Object.keys(buckets),
+      datasets: [{
+        label: 'Candidates',
+        data: Object.values(buckets),
+        backgroundColor: ['#FF444433','#FF880033','#FFBB3333','#00C85133'],
+        borderColor: ['#FF4444','#FF8800','#FFBB33','#00C851'],
+        borderWidth: 2,
+        borderRadius: 6,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { ticks: { stepSize: 1, color: '#666' }, grid: { color: '#1e1e2e' } },
+        x: { ticks: { color: '#aaa' }, grid: { display: false } }
+      }
+    }
+  });
+
+  // Role distribution
+  const roleCounts = {};
+  data.forEach(r => {
+    const role = r.interview.job_role;
+    roleCounts[role] = (roleCounts[role] || 0) + 1;
+  });
+
+  if (roleChart) roleChart.destroy();
+  const roleColors = ['#FFBB33','#0099CC','#00C851','#FF8800','#AA00FF','#FF4444','#FFBB33','#0099CC'];
+  roleChart = new Chart(document.getElementById('roleChart'), {
+    type: 'doughnut',
+    data: {
+      labels: Object.keys(roleCounts),
+      datasets: [{
+        data: Object.values(roleCounts),
+        backgroundColor: roleColors.map(c => c + '33'),
+        borderColor: roleColors,
+        borderWidth: 2,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'right', labels: { color: '#aaa', font: { size: 11 }, boxWidth: 12 } }
+      }
+    }
+  });
+}
+
+async function loadSkillCoverage() {
+  const role = document.getElementById('skillRoleSelect').value;
+  const gap = await fetch('/api/skill-gap?job_role=' + encodeURIComponent(role)).then(r => r.json()).catch(() => null);
+  const el = document.getElementById('skillCoverageContent');
+  if (!gap) { el.innerHTML = '<div class="empty-state">Could not load skill data.</div>'; return; }
+
+  let html = '';
+  const allSkills = [...gap.strengths, ...gap.gaps];
+  if (!allSkills.length) {
+    el.innerHTML = '<div class="empty-state">No skill assessments completed yet for this role.</div>';
+    return;
+  }
+
+  allSkills.forEach(s => {
+    const score = s.score !== null ? s.score : 0;
+    const color = score >= 75 ? '#00C851' : score >= 50 ? '#FF8800' : score > 0 ? '#FF4444' : '#555';
+    const label = s.status || 'Not Assessed';
+    html += `<div class="skill-match-row">
+      <div class="skill-match-name">${s.skill}</div>
+      <div class="skill-track"><div class="skill-fill" style="width:${score}%;background:${color}"></div></div>
+      <div class="skill-pct">${score > 0 ? score + '%' : '--'}</div>
+      <div style="font-size:11px;padding:2px 8px;border-radius:10px;background:${color}22;color:${color};border:1px solid ${color}44;min-width:80px;text-align:center">${label}</div>
+    </div>`;
+  });
+  html += `<div style="margin-top:14px;padding:12px;background:#FFBB3311;border:1px solid #FFBB3333;border-radius:8px;font-size:13px;color:#aaa">💡 ${gap.recommendation}</div>`;
+  el.innerHTML = html;
+}
+
+function renderComparison(data) {
+  const el = document.getElementById('comparisonContent');
+  if (data.length < 2) {
+    el.innerHTML = '<div class="empty-state">Complete at least 2 interviews to enable comparison.</div>';
+    return;
+  }
+
+  // Take the two most recent
+  const sorted = [...data].sort((a,b) => new Date(b.interview.created_at) - new Date(a.interview.created_at));
+  const c1 = sorted[0], c2 = sorted[1];
+
+  const metrics = [
+    { label: 'Interview Score', v1: c1.report.summary.avg_score + '/10', v2: c2.report.summary.avg_score + '/10',
+      better: c1.report.summary.avg_score >= c2.report.summary.avg_score ? 1 : 2 },
+    { label: 'Questions Answered', v1: c1.report.summary.total_questions, v2: c2.report.summary.total_questions,
+      better: c1.report.summary.total_questions >= c2.report.summary.total_questions ? 1 : 2 },
+    { label: 'Avg Response Time', v1: c1.report.summary.avg_time + 's', v2: c2.report.summary.avg_time + 's',
+      better: c1.report.summary.avg_time <= c2.report.summary.avg_time ? 1 : 2 },
+    { label: 'Job Role', v1: c1.interview.job_role, v2: c2.interview.job_role, better: 0 },
+    { label: 'Interview Type', v1: c1.interview.interview_type, v2: c2.interview.interview_type, better: 0 },
+  ];
+
+  el.innerHTML = `<div class="compare-grid">
+    <div class="compare-card">
+      <h4>Candidate A — Interview #${c1.interview.id}</h4>
+      <div style="font-size:12px;color:#555;margin-bottom:10px">${(c1.interview.created_at||'').substring(0,10)}</div>
+      ${metrics.map(m => `<div class="compare-row">
+        <span style="color:#aaa">${m.label}</span>
+        <span style="font-weight:700;color:${m.better===1?'#00C851':'#fff'}">${m.v1}</span>
+      </div>`).join('')}
+      <a href="/interview-report/${c1.interview.id}" class="btn btn-primary" style="text-decoration:none;margin-top:12px;display:inline-block">View Full Report</a>
+    </div>
+    <div class="compare-card">
+      <h4>Candidate B — Interview #${c2.interview.id}</h4>
+      <div style="font-size:12px;color:#555;margin-bottom:10px">${(c2.interview.created_at||'').substring(0,10)}</div>
+      ${metrics.map(m => `<div class="compare-row">
+        <span style="color:#aaa">${m.label}</span>
+        <span style="font-weight:700;color:${m.better===2?'#00C851':'#fff'}">${m.v2}</span>
+      </div>`).join('')}
+      <a href="/interview-report/${c2.interview.id}" class="btn btn-primary" style="text-decoration:none;margin-top:12px;display:inline-block">View Full Report</a>
+    </div>
+  </div>
+  <div style="margin-top:14px;padding:12px;background:#FFBB3311;border:1px solid #FFBB3333;border-radius:8px;font-size:12px;color:#aaa">
+    <strong style="color:#FFBB33">⚠️ Important:</strong> Comparison is based solely on job-relevant assessment scores (technical knowledge, communication, answer quality). Emotion and attention signals are excluded from this comparison.
+  </div>`;
+}
+
+loadDashboard();
+</script>
+</body>
+</html>

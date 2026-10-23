@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leaderboard — EmotionLearnAI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0f0f1a; --bg2: #1a1a2e; --bg3: #0d1117;
+      --border: #2a2a3e; --green: #00C851; --gold: #FFD700;
+      --silver: #C0C0C0; --bronze: #CD7F32; --text: #fff; --muted: #8888aa;
+    }
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+
+    /* HEADER */
+    .header {
+      background:linear-gradient(135deg,#1a1a2e,#16213e);
+      border-bottom:2px solid var(--green);
+      padding:14px 28px; display:flex; align-items:center;
+      justify-content:space-between; position:sticky; top:0; z-index:100;
+    }
+    .logo { font-size:22px; font-weight:800; color:var(--green); }
+    .logo span { color:#fff; }
+    .nav-links { display:flex; gap:10px; align-items:center; }
+    .nav-btn {
+      padding:7px 16px; border-radius:8px; font-size:13px; font-weight:600;
+      text-decoration:none; cursor:pointer; transition:all 0.2s; border:1.5px solid var(--border);
+      background:transparent; color:var(--muted);
+    }
+    .nav-btn:hover { border-color:var(--green); color:var(--green); }
+    .nav-btn.primary { border-color:var(--green); color:var(--green); }
+
+    /* BODY */
+    .page-body { max-width:860px; margin:0 auto; padding:32px 24px; }
+
+    .page-title {
+      text-align:center; margin-bottom:8px;
+      font-size:32px; font-weight:800;
+      background:linear-gradient(135deg,#FFD700,#FF8800);
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    }
+    .page-sub { text-align:center; color:var(--muted); font-size:14px; margin-bottom:32px; }
+
+    /* PODIUM — top 3 */
+    .podium { display:flex; justify-content:center; align-items:flex-end; gap:12px; margin-bottom:36px; }
+    .podium-slot {
+      display:flex; flex-direction:column; align-items:center; gap:6px;
+      transition:transform 0.2s;
+    }
+    .podium-slot:hover { transform:translateY(-4px); }
+    .podium-avatar {
+      border-radius:50%; display:flex; align-items:center; justify-content:center;
+      font-size:22px; font-weight:800; color:#000; flex-shrink:0;
+    }
+    .podium-slot.rank1 .podium-avatar { width:72px;height:72px; background:linear-gradient(135deg,#FFD700,#FFA500); }
+    .podium-slot.rank2 .podium-avatar { width:60px;height:60px; background:linear-gradient(135deg,#C0C0C0,#A0A0A0); }
+    .podium-slot.rank3 .podium-avatar { width:52px;height:52px; background:linear-gradient(135deg,#CD7F32,#A05A20); }
+    .podium-name { font-size:13px; font-weight:700; color:#fff; }
+    .podium-xp { font-size:12px; color:var(--muted); }
+    .podium-base {
+      width:100%; border-radius:8px 8px 0 0; text-align:center;
+      padding:8px 20px; font-size:22px; font-weight:800;
+    }
+    .rank1 .podium-base { height:80px; background:linear-gradient(135deg,#FFD70033,#FFA50022); border:1px solid #FFD70066; color:#FFD700; display:flex;align-items:center;justify-content:center; }
+    .rank2 .podium-base { height:60px; background:linear-gradient(135deg,#C0C0C033,#A0A0A022); border:1px solid #C0C0C066; color:#C0C0C0; display:flex;align-items:center;justify-content:center; }
+    .rank3 .podium-base { height:44px; background:linear-gradient(135deg,#CD7F3233,#A05A2022); border:1px solid #CD7F3266; color:#CD7F32; display:flex;align-items:center;justify-content:center; }
+
+    /* TABLE */
+    .lb-table {
+      background:var(--bg2); border:1px solid var(--border);
+      border-radius:16px; overflow:hidden;
+    }
+    .lb-row {
+      display:grid;
+      grid-template-columns:52px 1fr 100px 80px 80px 80px;
+      align-items:center; padding:14px 20px;
+      border-bottom:1px solid var(--border);
+      transition:background 0.2s;
+      gap:8px;
+    }
+    .lb-row:last-child { border-bottom:none; }
+    .lb-row:hover { background:#ffffff06; }
+    .lb-row.me {
+      background:linear-gradient(135deg,#00C85108,#00C85103);
+      border-left:3px solid var(--green);
+    }
+    .lb-row.header-row {
+      background:var(--bg3); font-size:11px; font-weight:700;
+      color:var(--muted); text-transform:uppercase; letter-spacing:0.7px;
+      cursor:default;
+    }
+    .lb-row.header-row:hover { background:var(--bg3); }
+    .rank-cell { font-size:18px; font-weight:800; text-align:center; }
+    .rank-1 { color:#FFD700; }
+    .rank-2 { color:#C0C0C0; }
+    .rank-3 { color:#CD7F32; }
+    .rank-other { color:var(--muted); font-size:14px; }
+    .user-cell { display:flex; align-items:center; gap:10px; min-width:0; }
+    .user-avatar {
+      width:34px; height:34px; border-radius:50%; flex-shrink:0;
+      display:flex; align-items:center; justify-content:center;
+      font-size:16px; background:linear-gradient(135deg,#00C851,#009933);
+    }
+    .user-avatar.me-avatar { background:linear-gradient(135deg,#FFD700,#FF8800); }
+    .user-name { font-weight:700; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .user-level { font-size:11px; color:var(--green); font-weight:600; }
+    .me-badge {
+      font-size:10px; background:var(--green); color:#000; font-weight:700;
+      padding:2px 6px; border-radius:4px; margin-left:6px; flex-shrink:0;
+    }
+    .xp-cell { font-weight:700; color:var(--green); font-size:14px; }
+    .streak-cell { font-size:13px; color:#FF8800; font-weight:600; }
+    .acc-cell { font-size:13px; color:#0099CC; font-weight:600; }
+    .col-label { text-align:right; }
+
+    /* SPINNER */
+    .spinner { width:36px; height:36px; border:3px solid #333; border-top-color:var(--green); border-radius:50%; animation:spin 0.7s linear infinite; margin:60px auto; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    /* EMPTY */
+    .empty { text-align:center; padding:60px 20px; color:var(--muted); }
+    .empty .icon { font-size:48px; margin-bottom:16px; }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <div>
+    <div class="logo">🧠 Emotion<span>LearnAI</span></div>
+    <div style="font-size:12px;color:var(--muted);margin-top:2px">🏆 Leaderboard</div>
+  </div>
+  <nav class="nav-links">
+    <a href="/" class="nav-btn">← Learn</a>
+    <a href="/profile" class="nav-btn">👤 Profile</a>
+    <a href="/dashboard" class="nav-btn">📊 Dashboard</a>
+    <a href="/logout" class="nav-btn" style="color:#FF4444;border-color:#FF444444">Logout</a>
+  </nav>
+</header>
+
+<main class="page-body">
+  <div class="page-title">🏆 Leaderboard</div>
+  <div class="page-sub">Top learners ranked by total XP earned</div>
+
+  <div id="podiumArea"></div>
+
+  <div class="lb-table" id="lbTable">
+    <div class="spinner"></div>
+  </div>
+</main>
+
+<script>
+async function loadLeaderboard() {
+  const res  = await fetch('/api/leaderboard');
+  const data = await res.json();
+
+  if (!data || data.length === 0) {
+    document.getElementById('lbTable').innerHTML = `
+      <div class="empty"><div class="icon">🏜️</div><p>No users yet. Be the first to earn XP!</p></div>`;
+    return;
+  }
+
+  // ── Podium (top 3) ──────────────────────────────────────────────────────
+  const top3 = data.slice(0, 3);
+  const rankClass = ['rank1','rank2','rank3'];
+  const rankSymbol = ['🥇','🥈','🥉'];
+  // Reorder for podium: 2nd, 1st, 3rd
+  const podiumOrder = [top3[1], top3[0], top3[2]].filter(Boolean);
+  const podiumRankIdx = [1, 0, 2];
+
+  let podiumHTML = '<div class="podium">';
+  podiumOrder.forEach((u, i) => {
+    const ri = podiumRankIdx[i];
+    const rc = rankClass[ri];
+    podiumHTML += `
+      <div class="podium-slot ${rc}" style="width:${rc==='rank1'?'160px':'130px'}">
+        <div class="podium-avatar">${u.level_emoji}</div>
+        <div class="podium-name">${u.username}${u.is_me ? ' <span style="color:var(--green);font-size:10px">(you)</span>' : ''}</div>
+        <div class="podium-xp">${u.xp} XP</div>
+        <div class="podium-base">${rankSymbol[ri]}</div>
+      </div>`;
+  });
+  podiumHTML += '</div>';
+  document.getElementById('podiumArea').innerHTML = podiumHTML;
+
+  // ── Full table ──────────────────────────────────────────────────────────
+  let tableHTML = `
+    <div class="lb-row header-row">
+      <div>Rank</div><div>Player</div>
+      <div class="col-label">XP</div>
+      <div class="col-label">Streak</div>
+      <div class="col-label">Accuracy</div>
+      <div></div>
+    </div>`;
+
+  data.forEach(u => {
+    const rankIcon = u.rank === 1 ? '<span class="rank-1">🥇</span>'
+                   : u.rank === 2 ? '<span class="rank-2">🥈</span>'
+                   : u.rank === 3 ? '<span class="rank-3">🥉</span>'
+                   : `<span class="rank-other">#${u.rank}</span>`;
+
+    tableHTML += `
+      <div class="lb-row ${u.is_me ? 'me' : ''}">
+        <div class="rank-cell">${rankIcon}</div>
+        <div class="user-cell">
+          <div class="user-avatar ${u.is_me ? 'me-avatar' : ''}">${u.level_emoji}</div>
+          <div>
+            <div class="user-name">${u.username}${u.is_me ? '<span class="me-badge">YOU</span>' : ''}</div>
+            <div class="user-level">${u.level_name} · Lv ${u.level}</div>
+          </div>
+        </div>
+        <div class="xp-cell" style="text-align:right">${u.xp.toLocaleString()}</div>
+        <div class="streak-cell" style="text-align:right">🔥 ${u.streak}d</div>
+        <div class="acc-cell" style="text-align:right">${u.accuracy}%</div>
+        <div></div>
+      </div>`;
+  });
+
+  document.getElementById('lbTable').innerHTML = tableHTML;
+}
+
+loadLeaderboard();
+</script>
+</body>
+</html>

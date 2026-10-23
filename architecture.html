@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>EmotionLearnAI - Architecture</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',sans-serif; }
+  body { background:#0a0a1a; color:#fff; padding:30px; min-height:100vh; }
+
+  h1 { text-align:center; font-size:28px; color:#00C851; margin-bottom:6px; letter-spacing:2px; }
+  .subtitle { text-align:center; color:#aaa; font-size:13px; margin-bottom:40px; }
+
+  /* ── MAIN FLOW ── */
+  .flow { display:flex; flex-direction:column; align-items:center; gap:0; }
+
+  /* LAYERS */
+  .layer { width:100%; max-width:1100px; display:flex; align-items:stretch; gap:12px; margin-bottom:0; }
+
+  .layer-label {
+    writing-mode:vertical-rl; text-orientation:mixed; transform:rotate(180deg);
+    font-size:11px; font-weight:700; letter-spacing:2px; color:#555;
+    padding:0 6px; display:flex; align-items:center; justify-content:center;
+    min-width:28px;
+  }
+
+  .layer-content { flex:1; display:flex; gap:12px; padding:14px 0; }
+
+  /* BOXES */
+  .box {
+    border-radius:12px; padding:14px 16px; flex:1;
+    border:1px solid #333; position:relative; transition:all 0.3s;
+  }
+  .box:hover { transform:translateY(-3px); box-shadow:0 8px 24px rgba(0,0,0,0.4); }
+  .box h3 { font-size:13px; font-weight:700; margin-bottom:6px; }
+  .box p  { font-size:11px; color:#aaa; line-height:1.6; }
+  .box .tag { font-size:10px; padding:2px 8px; border-radius:10px; display:inline-block; margin-bottom:6px; font-weight:600; }
+
+  /* COLORS */
+  .green  { background:#00C85110; border-color:#00C851; }
+  .green h3 { color:#00C851; }
+  .green .tag { background:#00C85122; color:#00C851; }
+
+  .blue   { background:#0099CC10; border-color:#0099CC; }
+  .blue h3 { color:#0099CC; }
+  .blue .tag { background:#0099CC22; color:#0099CC; }
+
+  .orange { background:#FF880010; border-color:#FF8800; }
+  .orange h3 { color:#FF8800; }
+  .orange .tag { background:#FF880022; color:#FF8800; }
+
+  .purple { background:#AA00FF10; border-color:#AA00FF; }
+  .purple h3 { color:#AA00FF; }
+  .purple .tag { background:#AA00FF22; color:#AA00FF; }
+
+  .red    { background:#FF444410; border-color:#FF4444; }
+  .red h3 { color:#FF4444; }
+  .red .tag { background:#FF444422; color:#FF4444; }
+
+  .yellow { background:#FFBB3310; border-color:#FFBB33; }
+  .yellow h3 { color:#FFBB33; }
+  .yellow .tag { background:#FFBB3322; color:#FFBB33; }
+
+  .teal   { background:#00FFCC10; border-color:#00FFCC; }
+  .teal h3 { color:#00FFCC; }
+  .teal .tag { background:#00FFCC22; color:#00FFCC; }
+
+  .pink   { background:#FF006610; border-color:#FF0066; }
+  .pink h3 { color:#FF0066; }
+  .pink .tag { background:#FF006622; color:#FF0066; }
+
+  /* ARROWS */
+  .arrow-down {
+    display:flex; flex-direction:column; align-items:center; margin:2px 0;
+    color:#444; font-size:11px; gap:2px;
+  }
+  .arrow-down .line { width:2px; height:22px; background:linear-gradient(#333,#555); }
+  .arrow-down .head { font-size:16px; color:#555; line-height:1; }
+  .arrow-down .label { font-size:10px; color:#555; background:#111; padding:2px 8px; border-radius:8px; border:1px solid #333; }
+
+  /* SECTION DIVIDER */
+  .section-title {
+    width:100%; max-width:1100px; text-align:left;
+    font-size:11px; font-weight:700; letter-spacing:3px; color:#444;
+    text-transform:uppercase; padding:18px 0 6px 36px;
+    border-top:1px solid #1a1a2e; margin-top:10px;
+  }
+
+  /* ALGORITHM BADGES */
+  .algo { 
+    position:absolute; top:-10px; right:10px;
+    font-size:9px; font-weight:700; padding:2px 8px;
+    border-radius:8px; background:#0a0a1a; border:1px solid #444; color:#666;
+    letter-spacing:1px;
+  }
+
+  /* BOTTOM ALGORITHMS GRID */
+  .algo-grid {
+    width:100%; max-width:1100px;
+    display:grid; grid-template-columns:repeat(4,1fr); gap:12px;
+    margin-top:30px;
+  }
+  .algo-card {
+    background:#0d0d1f; border:1px solid #222; border-radius:12px;
+    padding:14px; transition:all 0.3s;
+  }
+  .algo-card:hover { border-color:#00C851; transform:translateY(-2px); }
+  .algo-card .num { font-size:28px; font-weight:900; color:#1a1a3a; line-height:1; }
+  .algo-card h4 { font-size:12px; font-weight:700; color:#00C851; margin:4px 0; }
+  .algo-card p  { font-size:11px; color:#666; line-height:1.5; }
+  .algo-card .type { font-size:10px; color:#444; margin-top:6px; font-style:italic; }
+
+  /* TECH STACK */
+  .tech-row {
+    width:100%; max-width:1100px;
+    display:flex; gap:10px; flex-wrap:wrap; margin-top:30px; justify-content:center;
+  }
+  .tech-pill {
+    padding:6px 14px; border-radius:20px; font-size:12px; font-weight:600;
+    border:1px solid #333; background:#0d0d1f; color:#aaa;
+    display:flex; align-items:center; gap:6px;
+  }
+  .tech-pill span { font-size:16px; }
+
+  /* DATA FLOW MINI */
+  .dataflow {
+    width:100%; max-width:1100px;
+    background:#0d0d1f; border:1px solid #1a1a3a; border-radius:16px;
+    padding:20px 24px; margin-top:30px;
+  }
+  .dataflow h3 { font-size:13px; color:#00C851; margin-bottom:14px; letter-spacing:1px; }
+  .df-steps { display:flex; align-items:center; gap:0; flex-wrap:wrap; }
+  .df-step {
+    background:#111; border:1px solid #222; border-radius:8px;
+    padding:8px 12px; font-size:11px; text-align:center; min-width:100px;
+  }
+  .df-step .icon { font-size:18px; display:block; margin-bottom:3px; }
+  .df-step .name { color:#fff; font-weight:600; }
+  .df-step .sub  { color:#555; font-size:10px; }
+  .df-arrow { color:#333; font-size:20px; padding:0 4px; }
+
+  /* EMOTION MAP */
+  .emo-map {
+    width:100%; max-width:1100px;
+    display:grid; grid-template-columns:repeat(7,1fr); gap:8px; margin-top:12px;
+  }
+  .emo-card {
+    background:#0d0d1f; border-radius:10px; padding:10px 6px;
+    text-align:center; border:1px solid #1a1a3a;
+  }
+  .emo-card .emoji { font-size:22px; }
+  .emo-card .ename { font-size:10px; color:#aaa; margin:3px 0; }
+  .emo-card .arrow { font-size:10px; color:#444; }
+  .emo-card .cname { font-size:10px; font-weight:700; margin-top:2px; }
+</style>
+</head>
+<body>
+
+<h1>🧠 EmotionLearnAI</h1>
+<p class="subtitle">System Architecture · Algorithms · Data Flow</p>
+
+<div class="flow">
+
+  <!-- ══════════════════ LAYER 1: USER ══════════════════ -->
+  <div class="section-title">① USER LAYER</div>
+  <div class="layer">
+    <div class="layer-label">USER</div>
+    <div class="layer-content">
+      <div class="box green">
+        <span class="algo">INPUT</span>
+        <div class="tag">👤 Learner</div>
+        <h3>Student / User</h3>
+        <p>Sits in front of webcam. Selects subject. Answers quiz questions. Plays games when bored.</p>
+      </div>
+      <div class="box green">
+        <span class="algo">CAPTURE</span>
+        <div class="tag">📷 Camera</div>
+        <h3>Webcam Feed</h3>
+        <p>Browser captures live video. Every <b>2 seconds</b> a frame is taken and converted to base64 JPEG.</p>
+      </div>
+      <div class="box green">
+        <span class="algo">TRIGGER</span>
+        <div class="tag">🖱️ Interaction</div>
+        <h3>Quiz Answers + Subject Select</h3>
+        <p>User clicks quiz options → score tracked. Subject buttons → new session started.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow-down">
+    <div class="line"></div>
+    <div class="label">POST /api/analyze — base64 frame + session_id</div>
+    <div class="head">▼</div>
+  </div>
+
+  <!-- ══════════════════ LAYER 2: FRONTEND ══════════════════ -->
+  <div class="section-title">② FRONTEND LAYER — Browser (HTML + CSS + JavaScript)</div>
+  <div class="layer">
+    <div class="layer-label">FRONTEND</div>
+    <div class="layer-content">
+      <div class="box blue">
+        <span class="algo">UI</span>
+        <div class="tag">📷 Left Panel</div>
+        <h3>Camera + Emotion Display</h3>
+        <p>Live video feed. Emotion emoji + name + confidence bars. Cognitive state + adaptive message.</p>
+      </div>
+      <div class="box blue">
+        <span class="algo">CORE</span>
+        <div class="tag">📖 Center Panel</div>
+        <h3>Learning Content + Quiz</h3>
+        <p>Lesson title, explanation, code block. MCQ quiz with 3 options. Next lesson button. Hint/break alerts.</p>
+      </div>
+      <div class="box blue">
+        <span class="algo">STATS</span>
+        <div class="tag">📊 Right Panel</div>
+        <h3>Stats + Timeline + Subjects</h3>
+        <p>Engagement bar. Attention circle. Score/difficulty stats. Emotion timeline log. Subject selector.</p>
+      </div>
+      <div class="box orange">
+        <span class="algo">GAME</span>
+        <div class="tag">🎮 Game Modal</div>
+        <h3>4 Mini Games</h3>
+        <p>Auto-pops when bored detected. Math quiz · Memory cards · Typing speed · Snake (Canvas API).</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow-down">
+    <div class="line"></div>
+    <div class="label">HTTP REST API — Flask handles request</div>
+    <div class="head">▼</div>
+  </div>
+
+  <!-- ══════════════════ LAYER 3: BACKEND ══════════════════ -->
+  <div class="section-title">③ BACKEND LAYER — Python Flask (app.py)</div>
+  <div class="layer">
+    <div class="layer-label">BACKEND</div>
+    <div class="layer-content">
+      <div class="box purple">
+        <span class="algo">ALGO 1+2</span>
+        <div class="tag">🤖 Emotion Engine</div>
+        <h3>DeepFace + OpenCV</h3>
+        <p>Haar Cascade detects face → attention score. DeepFace CNN classifies 7 emotions with confidence %.</p>
+      </div>
+      <div class="box purple">
+        <span class="algo">ALGO 3</span>
+        <div class="tag">🧠 Cognitive Engine</div>
+        <h3>Rule-Based Expert System</h3>
+        <p>Maps emotion → cognitive state. Overrides with attention score and quiz performance rules.</p>
+      </div>
+      <div class="box purple">
+        <span class="algo">ALGO 4</span>
+        <div class="tag">📈 Adaptive Engine</div>
+        <h3>Difficulty FSM</h3>
+        <p>Finite State Machine: easy ↔ medium ↔ hard. Transitions triggered on every emotion change.</p>
+      </div>
+      <div class="box purple">
+        <span class="algo">ALGO 5+6+7</span>
+        <div class="tag">🎯 Content Engine</div>
+        <h3>Engagement + Boredom + Picker</h3>
+        <p>Weighted engagement score. Boredom streak counter. Filtered random question selector.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow-down">
+    <div class="line"></div>
+    <div class="label">Read / Write session data</div>
+    <div class="head">▼</div>
+  </div>
+
+  <!-- ══════════════════ LAYER 4: DATA ══════════════════ -->
+  <div class="section-title">④ DATA LAYER — In-Memory Session Store</div>
+  <div class="layer">
+    <div class="layer-label">DATA</div>
+    <div class="layer-content">
+      <div class="box teal">
+        <span class="algo">STORE</span>
+        <div class="tag">💾 Session Dict</div>
+        <h3>Per-User Session</h3>
+        <p>subject · difficulty · current_id · last_emotion · bored_count · correct · total_q · start_time</p>
+      </div>
+      <div class="box teal">
+        <span class="algo">BUFFER</span>
+        <div class="tag">📋 Deque Logs</div>
+        <h3>Rolling Logs (maxlen=50)</h3>
+        <p>emotion_log · attention_log · cognitive_log — last 50 readings kept in circular buffer.</p>
+      </div>
+      <div class="box teal">
+        <span class="algo">CONTENT</span>
+        <div class="tag">📚 Question Bank</div>
+        <h3>ALL_QUESTIONS Dict</h3>
+        <p>7 subjects × easy/medium/hard questions. Each has: title · body · code · quiz (MCQ).</p>
+      </div>
+      <div class="box teal">
+        <span class="algo">HISTORY</span>
+        <div class="tag">⏱ Timeline</div>
+        <h3>Performance History</h3>
+        <p>answered_ids list · performance scores list · timeline events with timestamp.</p>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end flow -->
+
+<!-- ══════════════════ EMOTION MAP ══════════════════ -->
+<div class="flow" style="margin-top:30px;">
+  <div class="section-title" style="border-top:none;">⑤ EMOTION → COGNITIVE STATE MAPPING (Algorithm 3)</div>
+  <div class="emo-map">
+    <div class="emo-card">
+      <div class="emoji">😄</div>
+      <div class="ename">Happy</div>
+      <div class="arrow">↓</div>
+      <div class="cname" style="color:#00C851">🟢 Flow</div>
+    </div>
+    <div class="emo-card">
+      <div class="emoji">😐</div>
+      <div class="ename">Neutral</div>
+      <div class="arrow">↓</div>
+      <div class="cname" style="color:#0099CC">🔵 Engaged</div>
+    </div>
+    <div class="emo-card">
+      <div class="emoji">😲</div>
+      <div class="ename">Surprise</div>
+      <div class="arrow">↓</div>
+      <div class="cname" style="color:#0099CC">🔵 Engaged</div>
+    </div>
+    <div class="emo-card">
+      <div class="emoji">😢</div>
+      <div class="ename">Sad</div>
+      <div class="arrow">↓</div>
+      <div class="cname" style="color:#FF8800">🟠 Bored</div>
+    </div>
+    <div class="emo-card">
+      <div class="emoji">😠</div>
+      <div class="ename">Angry</div>
+      <div class="arrow">↓</div>
+      <div class="cname" style="color:#FF4444">🔴 Overloaded</div>
+    </div>
+    <div class="emo-card">
+      <div class="emoji">😨</div>
+      <div class="ename">Fear</div>
+      <div class="arrow">↓</div>
+      <div class="cname" style="color:#AA00FF">🟣 Anxious</div>
+    </div>
+    <div class="emo-card">
+      <div class="emoji">🤢</div>
+      <div class="ename">Disgust</div>
+      <div class="arrow">↓</div>
+      <div class="cname" style="color:#FFBB33">🟡 Distracted</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ DATA FLOW ══════════════════ -->
+<div class="flow">
+  <div class="dataflow">
+    <h3>⑥ COMPLETE DATA FLOW — Every 2 Seconds</h3>
+    <div class="df-steps">
+      <div class="df-step">
+        <span class="icon">📷</span>
+        <div class="name">Camera</div>
+        <div class="sub">Frame capture</div>
+      </div>
+      <div class="df-arrow">→</div>
+      <div class="df-step">
+        <span class="icon">👁</span>
+        <div class="name">Haar Cascade</div>
+        <div class="sub">Face detect</div>
+      </div>
+      <div class="df-arrow">→</div>
+      <div class="df-step">
+        <span class="icon">🤖</span>
+        <div class="name">DeepFace CNN</div>
+        <div class="sub">Emotion detect</div>
+      </div>
+      <div class="df-arrow">→</div>
+      <div class="df-step">
+        <span class="icon">🧠</span>
+        <div class="name">Rule Engine</div>
+        <div class="sub">Cognitive state</div>
+      </div>
+      <div class="df-arrow">→</div>
+      <div class="df-step">
+        <span class="icon">📈</span>
+        <div class="name">FSM</div>
+        <div class="sub">Adjust difficulty</div>
+      </div>
+      <div class="df-arrow">→</div>
+      <div class="df-step">
+        <span class="icon">🎯</span>
+        <div class="name">Question Picker</div>
+        <div class="sub">Select content</div>
+      </div>
+      <div class="df-arrow">→</div>
+      <div class="df-step">
+        <span class="icon">😴</span>
+        <div class="name">Boredom Check</div>
+        <div class="sub">Game trigger?</div>
+      </div>
+      <div class="df-arrow">→</div>
+      <div class="df-step">
+        <span class="icon">🖥</span>
+        <div class="name">Update UI</div>
+        <div class="sub">JSON response</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ ALGORITHMS GRID ══════════════════ -->
+<div class="flow">
+  <div class="section-title">⑦ ALGORITHMS USED</div>
+  <div class="algo-grid">
+    <div class="algo-card">
+      <div class="num">01</div>
+      <h4>Haar Cascade Classifier</h4>
+      <p>Detects face in frame using sliding window + pre-trained XML model. Calculates attention from face position.</p>
+      <div class="type">Computer Vision · OpenCV</div>
+    </div>
+    <div class="algo-card">
+      <div class="num">02</div>
+      <h4>Deep CNN — Emotion Recognition</h4>
+      <p>DeepFace runs VGG/FER+ neural network. Extracts facial features layer by layer. Softmax outputs 7 emotion probabilities.</p>
+      <div class="type">Deep Learning · DeepFace</div>
+    </div>
+    <div class="algo-card">
+      <div class="num">03</div>
+      <h4>Rule-Based Expert System</h4>
+      <p>Lookup table maps emotion → cognitive state. Priority override rules for attention and quiz performance.</p>
+      <div class="type">Expert System · Rule Engine</div>
+    </div>
+    <div class="algo-card">
+      <div class="num">04</div>
+      <h4>Finite State Machine (FSM)</h4>
+      <p>3 states: easy ↔ medium ↔ hard. Transitions on every emotion change. Immediate question reload.</p>
+      <div class="type">Adaptive Learning · FSM</div>
+    </div>
+    <div class="algo-card">
+      <div class="num">05</div>
+      <h4>Weighted Average Scoring</h4>
+      <p>Engagement = Attention×40% + Performance×30% + Positive Emotions×30%. Live 0–100% score.</p>
+      <div class="type">Multi-factor Scoring</div>
+    </div>
+    <div class="algo-card">
+      <div class="num">06</div>
+      <h4>Streak Counter (Boredom)</h4>
+      <p>Counts consecutive sad/disgust detections. Resets on any other emotion. Triggers game at count ≥ 1.</p>
+      <div class="type">Threshold Detection</div>
+    </div>
+    <div class="algo-card">
+      <div class="num">07</div>
+      <h4>Filtered Random Selection</h4>
+      <p>Filters by subject + difficulty. Removes answered questions. Random pick from candidates. Resets when all done.</p>
+      <div class="type">Content Recommendation</div>
+    </div>
+    <div class="algo-card">
+      <div class="num">08</div>
+      <h4>Circular Buffer (Deque)</h4>
+      <p>Rolling window of last 50 emotion/attention readings. Used for trend analysis and engagement calculation.</p>
+      <div class="type">Data Structure · collections.deque</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ TECH STACK ══════════════════ -->
+<div class="flow">
+  <div class="section-title">⑧ TECHNOLOGY STACK</div>
+  <div class="tech-row">
+    <div class="tech-pill"><span>🐍</span> Python 3</div>
+    <div class="tech-pill"><span>🌐</span> Flask</div>
+    <div class="tech-pill"><span>👁</span> OpenCV</div>
+    <div class="tech-pill"><span>🤖</span> DeepFace</div>
+    <div class="tech-pill"><span>🔢</span> NumPy</div>
+    <div class="tech-pill"><span>🎨</span> HTML5 + CSS3</div>
+    <div class="tech-pill"><span>⚡</span> JavaScript (ES6)</div>
+    <div class="tech-pill"><span>🎮</span> Canvas API</div>
+    <div class="tech-pill"><span>🔗</span> REST API</div>
+    <div class="tech-pill"><span>💾</span> In-Memory Store</div>
+    <div class="tech-pill"><span>📦</span> Flask-CORS</div>
+    <div class="tech-pill"><span>🧠</span> VGG / FER+ CNN</div>
+  </div>
+</div>
+
+<p style="text-align:center;color:#333;font-size:11px;margin-top:40px;padding-bottom:20px;">
+  EmotionLearnAI · Intelligent Personalized Learning Framework · Architecture Diagram
+</p>
+
+</body>
+</html>

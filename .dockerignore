@@ -1,0 +1,11 @@
+*.db
+*.rar
+*.pdf
+.env
+.git
+__pycache__
+*.pyc
+*.pyo
+test_*.py
+*.log
+.amazonq

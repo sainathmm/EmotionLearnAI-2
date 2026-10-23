@@ -1,0 +1,2013 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EmotionLearnAI — Intelligent Personalized Learning</title>
+<meta name="description" content="Real-time emotion-adaptive learning platform with cognitive state analysis.">
+<!-- Google Font -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<!-- MediaPipe Hands -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Inter','Segoe UI',sans-serif}
+body{background:#0f0f1a;color:#fff;min-height:100vh;display:flex;flex-direction:column}
+.header{background:linear-gradient(135deg,#1a1a2e,#16213e);padding:15px 30px;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #00C851;flex-shrink:0}
+.logo{font-size:24px;font-weight:700;color:#00C851}
+.logo span{color:#fff}
+.main{display:grid;grid-template-columns:320px 1fr 280px;gap:15px;padding:15px;flex:1;min-height:0}
+
+/* VIVA DEBUG & CALIBRATION STYLES */
+.cam-quality-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;font-size:11px}
+.quality-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:12px;font-weight:600;font-size:11px;background:#0d1117;border:1px solid #333;color:#aaa}
+.quality-pill.good{border-color:#00C851;color:#00C851;background:#00C85115}
+.quality-pill.low_lighting{border-color:#FFBB33;color:#FFBB33;background:#FFBB3315}
+.quality-pill.blurry{border-color:#FF4444;color:#FF4444;background:#FF444415}
+.quality-pill.face_too_small{border-color:#0099CC;color:#0099CC;background:#0099CC15}
+.quality-pill.no_face{border-color:#666;color:#888}
+
+.calib-btn{padding:3px 8px;font-size:10px;font-weight:600;border-radius:6px;background:#0099CC22;border:1px solid #0099CC;color:#0099CC;cursor:pointer;transition:all 0.2s}
+.calib-btn:hover{background:#0099CC;color:#fff}
+
+.stability-pill{display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-top:3px}
+.stability-pill.stable{background:#00C85122;color:#00C851;border:1px solid #00C85144}
+.stability-pill.moderate{background:#FFBB3322;color:#FFBB33;border:1px solid #FFBB3344}
+.stability-pill.unstable{background:#FF444422;color:#FF4444;border:1px solid #FF444444}
+
+.cog-reasons{margin-top:8px;display:flex;flex-direction:column;gap:3px}
+.cog-reason-item{font-size:11px;color:#aaa;background:#0d1117;padding:3px 8px;border-radius:4px;border-left:2px solid #0099CC;line-height:1.3}
+
+.attention-hud{background:#0d1117;border-radius:8px;padding:8px;margin-top:6px;border:1px solid #222;display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px}
+.att-stat{display:flex;flex-direction:column}
+.att-stat span{color:#777;font-size:10px}
+.att-stat b{color:#00C851;font-weight:600}
+
+/* VIVA DEBUG DRAWER */
+.debug-drawer{position:fixed;bottom:15px;right:15px;width:360px;max-height:550px;background:#161b22;border:1.5px solid #00C851;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,0.8);z-index:9999;display:none;flex-direction:column;overflow:hidden}
+.debug-drawer.open{display:flex}
+.debug-header{background:#0d1117;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #333}
+.debug-title{font-size:13px;font-weight:700;color:#00C851;display:flex;align-items:center;gap:6px}
+.debug-close{background:none;border:none;color:#aaa;cursor:pointer;font-size:16px}
+.debug-body{padding:12px;overflow-y:auto;font-family:'Courier New',monospace;font-size:11px;color:#ccc;display:flex;flex-direction:column;gap:8px}
+.debug-sec{background:#0d1117;padding:8px;border-radius:6px;border:1px solid #2a2a3e}
+.debug-sec h4{font-size:10px;color:#0099CC;text-transform:uppercase;margin-bottom:4px;font-family:'Inter',sans-serif}
+
+/* CALIBRATION MODAL */
+.calib-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;z-index:10000}
+.calib-modal-overlay.open{display:flex}
+.calib-modal-card{background:#1a1a2e;border:2px solid #00C851;border-radius:16px;padding:24px;width:380px;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,0.9)}
+.calib-count{font-size:48px;font-weight:800;color:#00C851;margin:15px 0}
+.calib-inst{font-size:13px;color:#bbb;line-height:1.5}
+
+/* LEFT PANEL */
+.left{display:flex;flex-direction:column;gap:12px}
+.cam-box{background:#1a1a2e;border-radius:12px;padding:12px;border:1px solid #333}
+.cam-box h3{font-size:13px;color:#aaa;margin-bottom:8px}
+#video{width:100%;border-radius:8px;background:#000;height:180px;object-fit:cover}
+.cam-btn{width:100%;padding:8px;margin-top:8px;background:#00C851;border:none;border-radius:8px;color:#fff;font-weight:600;cursor:pointer;font-size:13px}
+.cam-btn.stop{background:#FF4444}
+
+.emotion-box{background:#1a1a2e;border-radius:12px;padding:12px;border:1px solid #333}
+.emotion-box h3{font-size:13px;color:#aaa;margin-bottom:10px}
+.emotion-main{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.emotion-emoji{font-size:36px}
+.emotion-name{font-size:20px;font-weight:700;color:#00C851}
+.emotion-conf{font-size:12px;color:#aaa}
+.emotion-bars{display:flex;flex-direction:column;gap:4px}
+.ebar{display:flex;align-items:center;gap:6px;font-size:11px}
+.ebar-label{width:55px;color:#aaa;text-transform:capitalize}
+.ebar-track{flex:1;background:#333;border-radius:4px;height:6px}
+.ebar-fill{height:6px;border-radius:4px;transition:width 0.4s}
+
+.cog-box{background:#1a1a2e;border-radius:12px;padding:12px;border:1px solid #333}
+.cog-box h3{font-size:13px;color:#aaa;margin-bottom:8px}
+.cog-state{font-size:16px;font-weight:700;margin-bottom:4px}
+.cog-desc{font-size:12px;color:#aaa;margin-bottom:8px}
+.adapt-msg{font-size:12px;padding:8px;background:#0d1117;border-radius:6px;border-left:3px solid #00C851;color:#ccc}
+
+/* CENTER PANEL */
+.center{display:flex;flex-direction:column;gap:12px;overflow-y:auto}
+.engagement-bar{background:#1a1a2e;border-radius:12px;padding:12px;border:1px solid #333;display:flex;align-items:center;gap:15px}
+.eng-label{font-size:13px;color:#aaa;white-space:nowrap}
+.eng-track{flex:1;background:#333;border-radius:8px;height:14px}
+.eng-fill{height:14px;border-radius:8px;background:linear-gradient(90deg,#FF4444,#FFBB33,#00C851);transition:width 0.5s}
+.eng-val{font-size:16px;font-weight:700;color:#00C851;white-space:nowrap}
+
+.content-card{background:#1a1a2e;border-radius:12px;padding:20px;border:1px solid #333;flex:1}
+.content-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px}
+.content-title{font-size:20px;font-weight:700}
+.diff-badge{padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600}
+.diff-easy{background:#00C85122;color:#00C851;border:1px solid #00C851}
+.diff-medium{background:#FF880022;color:#FF8800;border:1px solid #FF8800}
+.diff-hard{background:#FF444422;color:#FF4444;border:1px solid #FF4444}
+
+.content-body{font-size:14px;color:#ccc;line-height:1.7;margin-bottom:15px}
+.code-block{background:#0d1117;border-radius:8px;padding:15px;font-family:'Courier New',monospace;font-size:13px;color:#00ff88;border:1px solid #333;margin-bottom:15px;white-space:pre-wrap;overflow-x:auto}
+
+.quiz-section{background:#0d1117;border-radius:10px;padding:15px;border:1px solid #333}
+.quiz-q{font-size:14px;font-weight:600;margin-bottom:12px;color:#fff}
+.quiz-opts{display:flex;flex-direction:column;gap:8px}
+.quiz-opt{padding:10px 15px;background:#1a1a2e;border:1px solid #333;border-radius:8px;cursor:pointer;font-size:13px;transition:all 0.2s;text-align:left;color:#fff}
+.quiz-opt:hover{border-color:#00C851;background:#00C85111}
+.quiz-opt.correct{background:#00C85122;border-color:#00C851;color:#00C851}
+.quiz-opt.wrong{background:#FF444422;border-color:#FF4444;color:#FF4444}
+.quiz-result{margin-top:10px;padding:10px;border-radius:8px;font-size:13px;font-weight:600;display:none}
+.quiz-result.show{display:block}
+.quiz-result.ok{background:#00C85122;color:#00C851}
+.quiz-result.fail{background:#FF444422;color:#FF4444}
+.next-btn{margin-top:12px;padding:10px 20px;background:#00C851;border:none;border-radius:8px;color:#fff;font-weight:600;cursor:pointer;font-size:13px;display:none}
+.next-btn.show{display:inline-block}
+
+.hint-box{background:#AA00FF22;border:1px solid #AA00FF;border-radius:8px;padding:10px;font-size:13px;color:#CC88FF;margin-bottom:12px;display:none}
+.hint-box.show{display:block}
+.break-box{background:#FF880022;border:1px solid #FF8800;border-radius:8px;padding:10px;font-size:13px;color:#FFAA44;margin-bottom:12px;display:none}
+.break-box.show{display:block}
+
+/* RIGHT PANEL */
+.right{display:flex;flex-direction:column;gap:12px}
+.stats-box{background:#1a1a2e;border-radius:12px;padding:12px;border:1px solid #333}
+.stats-box h3{font-size:13px;color:#aaa;margin-bottom:10px}
+.stat-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #222;font-size:13px}
+.stat-row:last-child{border:none}
+.stat-val{font-weight:700;color:#00C851}
+
+.timeline-box{background:#1a1a2e;border-radius:12px;padding:12px;border:1px solid #333;flex:1;overflow:hidden}
+.timeline-box h3{font-size:13px;color:#aaa;margin-bottom:10px}
+.timeline-list{display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto}
+.tl-item{display:flex;align-items:center;gap:8px;padding:6px 8px;background:#0d1117;border-radius:6px;font-size:11px}
+.tl-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.tl-info{flex:1}
+.tl-time{color:#555;font-size:10px}
+
+.subject-box{background:#1a1a2e;border-radius:12px;padding:12px;border:1px solid #333}
+.subject-box h3{font-size:13px;color:#aaa;margin-bottom:10px}
+.subj-btn{width:100%;padding:8px;margin-bottom:6px;background:#0d1117;border:1px solid #333;border-radius:8px;color:#fff;cursor:pointer;font-size:13px;text-align:left;transition:all 0.2s}
+.subj-btn:hover,.subj-btn.active{border-color:#00C851;background:#00C85111;color:#00C851}
+
+.attention-box{background:#1a1a2e;border-radius:12px;padding:12px;border:1px solid #333}
+.attention-box h3{font-size:13px;color:#aaa;margin-bottom:8px}
+.att-circle{width:80px;height:80px;border-radius:50%;margin:0 auto;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;border:4px solid #00C851;transition:all 0.5s}
+.att-label{text-align:center;font-size:11px;color:#aaa;margin-top:6px}
+
+canvas:not(#snakeCanvas):not(#canvas):not(#handCanvas){display:none}
+
+/* ── INTERVENTION BANNER (Feature 4) ─────────────────────────── */
+.intervention-banner{
+  display:none;
+  border-radius:10px;
+  padding:12px 16px;
+  margin-bottom:14px;
+  font-size:13px;
+  line-height:1.6;
+  font-weight:500;
+  animation:slideIn 0.3s ease;
+}
+@keyframes slideIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+.intervention-banner.show{display:flex;align-items:flex-start;gap:10px;}
+.intervention-banner.challenge{background:#FF880015;border:1px solid #FF880066;color:#FFAA55}
+.intervention-banner.hint{background:#AA00FF15;border:1px solid #AA00FF66;color:#CC88FF}
+.intervention-banner.break{background:#FF444415;border:1px solid #FF444466;color:#FF8888}
+.intervention-banner.focus{background:#FFBB3315;border:1px solid #FFBB3366;color:#FFD580}
+.intervention-icon{font-size:20px;flex-shrink:0;margin-top:1px}
+
+/* ── RECOMMENDATION CHIP ──────────────────────────────────────── */
+.rec-chip{
+  background:#00C85110;
+  border:1px solid #00C85133;
+  border-radius:8px;
+  padding:8px 10px;
+  font-size:11px;
+  color:#00C851;
+  line-height:1.5;
+  margin-top:4px;
+  display:none;
+}
+.rec-chip.show{display:block}
+
+/* ── SMOOTHED LABEL ───────────────────────────────────────────── */
+.emotion-smoothed{font-size:10px;color:#FF8800;margin-top:1px;font-weight:600;letter-spacing:0.3px}
+
+/* GAME MODAL */
+.game-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:#000000cc;z-index:999;align-items:center;justify-content:center}
+.game-overlay.show{display:flex}
+.game-modal{background:#1a1a2e;border-radius:16px;padding:20px;border:2px solid #FF8800;width:520px;max-width:95vw}
+.game-modal h2{color:#FF8800;margin-bottom:5px;font-size:18px}
+.game-tabs{display:flex;gap:8px;margin:12px 0}
+.gtab{padding:7px 14px;border-radius:8px;border:1px solid #333;background:#0d1117;color:#aaa;cursor:pointer;font-size:13px}
+.gtab.active{border-color:#FF8800;color:#FF8800;background:#FF880011}
+.game-area{min-height:260px}
+.game-close{float:right;background:#FF4444;border:none;color:#fff;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:13px}
+
+/* Memory Game */
+.mem-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+.mem-card{height:60px;background:#0d1117;border:2px solid #333;border-radius:8px;cursor:pointer;font-size:22px;display:flex;align-items:center;justify-content:center;transition:all 0.3s}
+.mem-card.flip{background:#FF880022;border-color:#FF8800}
+.mem-card.matched{background:#00C85122;border-color:#00C851}
+
+/* Math Game */
+.math-q{font-size:28px;font-weight:700;text-align:center;margin:20px 0;color:#fff}
+.math-opts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.math-opt{padding:14px;background:#0d1117;border:2px solid #333;border-radius:8px;cursor:pointer;font-size:18px;font-weight:700;color:#fff;transition:all 0.2s}
+.math-opt:hover{border-color:#FF8800;background:#FF880011}
+.math-opt.correct{background:#00C85122;border-color:#00C851;color:#00C851}
+.math-opt.wrong{background:#FF444422;border-color:#FF4444;color:#FF4444}
+.math-score{text-align:center;font-size:13px;color:#aaa;margin-top:10px}
+
+/* Typing Game */
+.type-word{font-size:32px;font-weight:700;text-align:center;color:#FF8800;margin:15px 0;letter-spacing:4px}
+.type-input{width:100%;padding:12px;background:#0d1117;border:2px solid #333;border-radius:8px;color:#fff;font-size:18px;text-align:center;outline:none}
+.type-input:focus{border-color:#FF8800}
+.type-timer{text-align:center;font-size:13px;color:#aaa;margin-top:8px}
+.type-score{text-align:center;font-size:16px;font-weight:700;color:#00C851;margin-top:8px}
+
+/* Snake Game */
+#snakeCanvas{display:block;margin:10px auto;border:2px solid #FF8800;border-radius:8px;background:#0d1117}
+.snake-score{text-align:center;font-size:14px;color:#aaa;margin-top:6px}
+.snake-ctrl{display:flex;justify-content:center;gap:8px;margin-top:8px}
+.snake-ctrl button{padding:8px 16px;background:#0d1117;border:1px solid #FF8800;border-radius:6px;color:#FF8800;cursor:pointer;font-size:13px}
+
+/* ── PHASE 1: PROFILE BAR ────────────────────────────────────────────── */
+.profile-bar{
+  background:#13131f;
+  border-bottom:1px solid #2a2a3e;
+  padding:8px 20px;
+  display:flex;
+  align-items:center;
+  gap:18px;
+  flex-shrink:0;
+  flex-wrap:wrap;
+}
+
+/* Avatar + name */
+.pb-user{display:flex;align-items:center;gap:10px;}
+.pb-avatar{
+  width:36px;height:36px;
+  background:linear-gradient(135deg,#00C851,#009933);
+  border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;flex-shrink:0;
+}
+.pb-name{font-size:14px;font-weight:700;color:#fff;line-height:1.2}
+.pb-level{font-size:11px;color:#00C851;font-weight:600}
+
+/* XP bar */
+.pb-xp{display:flex;align-items:center;gap:8px;flex:1;min-width:140px;max-width:280px;}
+.pb-xp-label{font-size:11px;color:#888;white-space:nowrap}
+.pb-xp-track{flex:1;background:#2a2a3e;border-radius:999px;height:8px;overflow:hidden}
+.pb-xp-fill{height:8px;border-radius:999px;background:linear-gradient(90deg,#00C851,#00ff88);transition:width 0.5s ease;}
+.pb-xp-val{font-size:11px;color:#00C851;font-weight:700;white-space:nowrap}
+
+/* Streak */
+.pb-streak{
+  display:flex;align-items:center;gap:5px;
+  background:#FF880015;border:1px solid #FF880044;
+  border-radius:20px;padding:4px 12px;
+  font-size:12px;font-weight:700;color:#FF8800;
+}
+
+/* Logout */
+.pb-logout{
+  padding:5px 12px;
+  background:transparent;
+  border:1px solid #333;
+  border-radius:8px;
+  color:#666;
+  font-size:12px;
+  cursor:pointer;
+  text-decoration:none;
+  transition:all 0.2s;
+  margin-left:auto;
+}
+.pb-logout:hover{border-color:#FF4444;color:#FF4444;}
+
+/* ── XP TOAST ────────────────────────────────────────────────────────── */
+.xp-toast{
+  position:fixed;
+  top:80px;
+  right:22px;
+  background:linear-gradient(135deg,#00C851,#009933);
+  color:#fff;
+  padding:11px 18px;
+  border-radius:10px;
+  font-size:14px;
+  font-weight:700;
+  z-index:9999;
+  box-shadow:0 4px 20px rgba(0,200,81,0.4);
+  animation:toastSlide 0.3s ease, toastFade 0.3s ease 2.2s forwards;
+  pointer-events:none;
+}
+.xp-toast.levelup{
+  background:linear-gradient(135deg,#FFBB33,#FF8800);
+  box-shadow:0 4px 24px rgba(255,187,51,0.5);
+}
+@keyframes toastSlide{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+@keyframes toastFade{to{opacity:0;transform:translateY(-10px)}}
+
+/* ── HAND GESTURE BOX ────────────────────────────────────────────────────── */
+.hand-box{background:#1a1a2e;border-radius:12px;padding:12px;border:1px solid #333}
+.hand-box h3{font-size:13px;color:#aaa;margin-bottom:8px}
+.hand-gesture-display{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.hand-gesture-icon{font-size:32px;transition:all 0.3s}
+.hand-gesture-name{font-size:16px;font-weight:700;color:#00C851}
+.hand-gesture-desc{font-size:11px;color:#aaa;margin-top:2px}
+
+/* ── COGNITIVE EFFORT BOX ────────────────────────────────────────────────── */
+.effort-box{background:#1a1a2e;border-radius:12px;padding:12px;border:1px solid #333}
+.effort-box h3{font-size:13px;color:#aaa;margin-bottom:8px}
+.effort-score-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.effort-score-num{font-size:28px;font-weight:800;transition:color 0.4s}
+.effort-label{font-size:12px;font-weight:600}
+.effort-track{flex:1;background:#333;border-radius:8px;height:10px}
+.effort-fill{height:10px;border-radius:8px;transition:width 0.5s,background 0.4s}
+.effort-components{display:flex;flex-direction:column;gap:3px;margin-top:8px}
+.ec-row{display:flex;align-items:center;gap:6px;font-size:10px}
+.ec-label{width:90px;color:#aaa;text-transform:capitalize}
+.ec-track{flex:1;background:#222;border-radius:3px;height:4px}
+.ec-fill{height:4px;border-radius:3px;background:#00C851;transition:width 0.4s}
+.effort-intervention{font-size:11px;padding:7px 9px;background:#0d1117;border-radius:6px;border-left:3px solid #00C851;color:#ccc;margin-top:8px;display:none}
+.effort-intervention.show{display:block}
+
+/* ── RELAXATION GAME MODAL ───────────────────────────────────────────────── */
+.game-overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.85);
+  backdrop-filter:blur(6px);
+  z-index:10001;
+  display:none;
+  align-items:center;
+  justify-content:center;
+}
+.game-overlay.show{display:flex;}
+.game-modal{
+  background:#1a1a2e;
+  border:2px solid #FF8800;
+  border-radius:16px;
+  width:460px;
+  max-width:92vw;
+  padding:20px;
+  box-shadow:0 12px 40px rgba(0,0,0,0.9), 0 0 20px rgba(255,136,0,0.25);
+  display:flex;
+  flex-direction:column;
+}
+.game-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:8px;
+}
+.game-title{
+  font-size:17px;
+  font-weight:700;
+  color:#FF8800;
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.game-close-btn{
+  background:transparent;
+  border:none;
+  color:#aaa;
+  font-size:18px;
+  cursor:pointer;
+  padding:2px 8px;
+  border-radius:6px;
+}
+.game-close-btn:hover{color:#fff;background:#333;}
+.game-tabs{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:6px;
+  margin-bottom:14px;
+}
+.gtab{
+  padding:7px 4px;
+  background:#0d1117;
+  border:1px solid #333;
+  border-radius:8px;
+  color:#aaa;
+  font-size:11px;
+  font-weight:600;
+  cursor:pointer;
+  text-align:center;
+  transition:all 0.2s;
+}
+.gtab.active{
+  background:#FF8800;
+  border-color:#FF8800;
+  color:#fff;
+  box-shadow:0 2px 10px rgba(255,136,0,0.4);
+}
+.game-card-body{
+  background:#0d1117;
+  border-radius:10px;
+  padding:16px;
+  min-height:260px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  border:1px solid #222;
+}
+
+/* Mini-game specifics */
+.math-q{font-size:26px;font-weight:800;color:#fff;margin-bottom:14px;letter-spacing:1px}
+.math-opts{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;max-width:280px;margin-bottom:12px}
+.math-opt{padding:12px;background:#1a1a2e;border:1.5px solid #444;border-radius:8px;color:#fff;font-size:16px;font-weight:700;cursor:pointer;transition:all 0.2s}
+.math-opt:hover{border-color:#00C851;background:#00C85122}
+.math-opt.correct{border-color:#00C851;background:#00C851;color:#fff}
+.math-opt.wrong{border-color:#FF4444;background:#FF4444;color:#fff}
+.math-score{font-size:13px;color:#FFBB33;font-weight:600}
+
+.mem-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;width:240px;height:240px}
+.mem-card{background:#1a1a2e;border:1.5px solid #444;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:22px;transition:transform 0.2s}
+.mem-card:hover{border-color:#FF8800}
+.mem-card.flip{border-color:#00C851;background:#00C85122}
+.mem-card.matched{border-color:#00C851;background:#00C85144;cursor:default;opacity:0.8}
+
+.type-word{font-size:28px;font-weight:800;color:#00C851;margin-bottom:12px;letter-spacing:1px}
+.type-input{padding:10px 14px;background:#1a1a2e;border:1.5px solid #FF8800;border-radius:8px;color:#fff;font-size:16px;text-align:center;width:240px;margin-bottom:10px;outline:none}
+.type-timer{font-size:12px;color:#aaa}
+.type-score{font-size:13px;color:#FFBB33;font-weight:600;margin-top:4px}
+
+.snake-score{font-size:13px;color:#FFBB33;font-weight:600;margin:6px 0}
+.snake-ctrl{display:flex;gap:6px;margin-top:4px}
+.snake-ctrl button{padding:6px 14px;background:#1a1a2e;border:1px solid #444;border-radius:6px;color:#fff;font-size:14px;cursor:pointer}
+.snake-ctrl button:hover{background:#333}
+
+/* Adaptive Learning Feedback Component */
+.adaptive-panel {
+  background: linear-gradient(135deg, rgba(26, 32, 44, 0.95), rgba(15, 23, 42, 0.95));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-left: 4px solid #00C851;
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  transition: all 0.3s ease;
+}
+.adaptive-panel.action-advance { border-left-color: #00C851; }
+.adaptive-panel.action-support { border-left-color: #33b5e5; }
+.adaptive-panel.action-break { border-left-color: #ffbb33; }
+.adaptive-panel.action-revision { border-left-color: #aa66cc; }
+.adaptive-panel.action-scaffold { border-left-color: #ff8800; }
+
+.adaptive-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.adaptive-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #e2e8f0;
+}
+.adaptive-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+.adaptive-topic-badge {
+  background: rgba(255, 255, 255, 0.08);
+  padding: 3px 8px;
+  border-radius: 6px;
+  color: #94a3b8;
+  font-weight: 600;
+}
+.adaptive-acc-badge {
+  background: rgba(0, 200, 81, 0.15);
+  color: #00C851;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-weight: 700;
+}
+.adaptive-action-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.adaptive-action-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.adaptive-action-tag.tag-advance { background: rgba(0, 200, 81, 0.2); color: #00C851; border: 1px solid rgba(0, 200, 81, 0.4); }
+.adaptive-action-tag.tag-support { background: rgba(51, 181, 229, 0.2); color: #33b5e5; border: 1px solid rgba(51, 181, 229, 0.4); }
+.adaptive-action-tag.tag-break { background: rgba(255, 187, 51, 0.2); color: #ffbb33; border: 1px solid rgba(255, 187, 51, 0.4); }
+.adaptive-action-tag.tag-revision { background: rgba(170, 102, 204, 0.2); color: #aa66cc; border: 1px solid rgba(170, 102, 204, 0.4); }
+.adaptive-action-tag.tag-maintain { background: rgba(148, 163, 184, 0.15); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.3); }
+
+.adaptive-reason {
+  font-size: 13px;
+  color: #cbd5e1;
+  line-height: 1.45;
+  flex: 1;
+}
+.adaptive-support-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.adaptive-btn-action {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.adaptive-btn-action:hover {
+  background: rgba(255, 255, 255, 0.18);
+  transform: translateY(-1px);
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">🧠 Emotion<span>LearnAI</span></div>
+  <div style="font-size:13px;color:#aaa">Intelligent Personalized Learning &middot; Emotion &amp; Cognitive Analysis</div>
+  <div id="sessionId" style="font-size:12px;color:#555">Session: --</div>
+  <div style="display:flex;gap:8px;align-items:center">
+    <a href="/leaderboard" style="padding:6px 14px;background:transparent;border:1.5px solid #FFD70066;border-radius:8px;color:#FFD700;font-size:13px;font-weight:600;text-decoration:none">🏆 Leaderboard</a>
+    <a href="/profile" style="padding:6px 14px;background:transparent;border:1.5px solid #0099CC66;border-radius:8px;color:#0099CC;font-size:13px;font-weight:600;text-decoration:none">👤 Profile</a>
+    <a href="/dashboard" style="padding:6px 14px;background:transparent;border:1.5px solid #00C851;border-radius:8px;color:#00C851;font-size:13px;font-weight:600;text-decoration:none">📊 Dashboard</a>
+    <a href="/select-role" style="padding:6px 14px;background:transparent;border:1.5px solid #AA00FF;border-radius:8px;color:#AA00FF;font-size:13px;font-weight:600;text-decoration:none">🌐 Platform Hub</a>
+    <button onclick="openGame()" style="padding:6px 14px;background:#FF8800;border:none;border-radius:8px;color:#fff;font-size:13px;cursor:pointer">🎮 Game</button>
+  </div>
+</div>
+
+{% if user %}
+<!-- PHASE 1: User profile bar (XP, level, streak) -->
+<div class="profile-bar" id="profileBar">
+  <div class="pb-user">
+    <div class="pb-avatar">{{ user.level_emoji }}</div>
+    <div>
+      <div class="pb-name">{{ user.username }}</div>
+      <div class="pb-level">{{ user.level_name }} &bull; Level {{ user.level }}</div>
+    </div>
+  </div>
+
+  <div class="pb-xp">
+    <span class="pb-xp-label">XP</span>
+    <div class="pb-xp-track">
+      <div class="pb-xp-fill" id="xpFill" style="width:{{ user.xp_percent }}%"></div>
+    </div>
+    <span class="pb-xp-val" id="xpVal">{{ user.xp }}</span>
+  </div>
+
+  <div class="pb-streak">🔥 {{ user.streak }} day streak</div>
+
+  <a href="/logout" class="pb-logout">Logout</a>
+</div>
+
+<!-- JS variables for live XP updates -->
+<script>
+  let _userXP      = {{ user.xp }};
+  let _userLevel   = {{ user.level }};
+  let _xpPercent   = {{ user.xp_percent }};
+</script>
+{% else %}
+<script>let _userXP=0,_userLevel=1,_xpPercent=0;</script>
+{% endif %}
+
+<div class="main">
+
+  <!-- LEFT -->
+  <div class="left">
+    <div class="cam-box">
+      <div class="cam-quality-bar">
+        <span class="quality-pill" id="camQuality">● Camera Initializing</span>
+        <button class="calib-btn" id="calibBtn" onclick="startCalibration()">🎯 Calibrate (3s)</button>
+      </div>
+      <video id="video" autoplay muted playsinline></video>
+      <canvas id="canvas" style="display:none"></canvas>
+      <button class="cam-btn" id="camBtn" onclick="toggleCamera()">▶ Start Camera</button>
+    </div>
+
+    <div class="emotion-box">
+      <h3>😊 Emotion Detection</h3>
+      <div class="emotion-main">
+        <div class="emotion-emoji" id="emoEmoji">😐</div>
+        <div>
+          <div class="emotion-name" id="emoName">Neutral</div>
+          <div class="emotion-conf" id="emoConf">Confidence: --</div>
+          <div class="stability-pill stable" id="emoStability" style="display:none">Stable</div>
+          <!-- Smoothed label shown when noise filtering is active -->
+          <div class="emotion-smoothed" id="emoSmoothed" style="display:none">✦ smoothed</div>
+        </div>
+      </div>
+      <div class="emotion-bars" id="emoBars"></div>
+    </div>
+
+    <!-- ATTENTION & 3D HEAD POSE HUD -->
+    <div class="cog-box">
+      <h3>👁️ Attention & 3D Gaze</h3>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="att-circle" id="attCircle" style="width:48px;height:48px;border-radius:50%;border:3px solid #00C851;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700">--</div>
+        <div>
+          <div id="attLabel" style="font-size:14px;font-weight:700;color:#00C851">High Attention</div>
+          <div id="headPoseText" style="font-size:11px;color:#aaa">Gaze: Forward</div>
+        </div>
+      </div>
+      <div class="attention-hud">
+        <div class="att-stat"><span>3D Pose:</span><b id="hudPose">Y: 0° P: 0°</b></div>
+        <div class="att-stat"><span>Eye State:</span><b id="hudEye">Open (EAR: --)</b></div>
+        <div class="att-stat"><span>Blink Rate:</span><b id="hudBlink">-- /min</b></div>
+        <div class="att-stat"><span>Baseline:</span><b id="hudCalib">Default</b></div>
+      </div>
+    </div>
+
+    <div class="cog-box">
+      <h3>🧠 Cognitive State</h3>
+      <div class="cog-state" id="cogState">--</div>
+      <div class="cog-desc" id="cogDesc">Start camera to begin analysis</div>
+      <div class="cog-reasons" id="cogReasons"></div>
+      <div class="adapt-msg" id="adaptMsg" style="margin-top:8px">Waiting for analysis...</div>
+    </div>
+
+    <!-- HAND GESTURE BOX -->
+    <div class="hand-box">
+      <h3>✋ Hand Gesture Detection</h3>
+      <div class="hand-gesture-display">
+        <div class="hand-gesture-icon" id="handIcon">✋</div>
+        <div>
+          <div class="hand-gesture-name" id="handGestureName">No Hand</div>
+          <div class="hand-gesture-desc" id="handGestureDesc">Show your hand to the camera</div>
+        </div>
+      </div>
+      <canvas id="handCanvas" width="280" height="120" style="width:100%;border-radius:6px;background:#0d1117;display:block"></canvas>
+    </div>
+
+    <!-- COGNITIVE EFFORT BOX -->
+    <div class="effort-box">
+      <h3>⚡ Cognitive Effort Model</h3>
+      <div class="effort-score-row">
+        <div class="effort-score-num" id="effortScore">--</div>
+        <div style="flex:1">
+          <div class="effort-label" id="effortLabel">Waiting...</div>
+          <div class="effort-track" style="margin-top:4px">
+            <div class="effort-fill" id="effortFill" style="width:0%"></div>
+          </div>
+        </div>
+      </div>
+      <div class="effort-components" id="effortComponents"></div>
+      <div class="effort-intervention" id="effortIntervention"></div>
+    </div>
+
+    <!-- ML PREDICTION BOX -->
+    <div class="effort-box" id="mlPredBox">
+      <h3>🤖 ML Prediction</h3>
+      <div class="effort-score-row">
+        <div class="effort-score-num" id="mlPredIcon" style="font-size:22px">--</div>
+        <div style="flex:1">
+          <div class="effort-label" id="mlPredLabel" style="font-size:13px;font-weight:700">No model loaded</div>
+          <div style="font-size:11px;color:#aaa;margin-top:2px" id="mlPredSub">Train model to enable</div>
+        </div>
+      </div>
+      <div class="effort-track" style="margin-top:6px">
+        <div class="effort-fill" id="mlPredFill" style="width:0%"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:11px;color:#aaa">
+        <span>P(wrong): <b id="mlProbaWrong">--</b></span>
+        <span>P(correct): <b id="mlProbaCorrect">--</b></span>
+        <span>Next: <b id="mlSuggestedDiff" style="color:#00C851">--</b></span>
+      </div>
+    </div>
+
+
+
+    <!-- VOICE STRESS BOX -->
+    <div class="hand-box">
+      <h3>🎤 Voice Stress Detection</h3>
+      <div class="hand-gesture-display">
+        <div class="hand-gesture-icon" id="voiceIcon">🎤</div>
+        <div>
+          <div class="hand-gesture-name" id="voiceLabel">Not Active</div>
+          <div class="hand-gesture-desc" id="voiceDesc">Click mic button to start</div>
+        </div>
+      </div>
+      <button onclick="toggleVoice()" id="voiceBtn" style="width:100%;padding:7px;background:#0d1117;border:1px solid #333;border-radius:8px;color:#aaa;font-size:12px;cursor:pointer;margin-bottom:6px">🎤 Start Voice Analysis</button>
+      <canvas id="voiceCanvas" width="280" height="60" style="width:100%;border-radius:6px;background:#0d1117;display:block"></canvas>
+    </div>
+  </div>
+
+  <!-- CENTER -->
+  <div class="center">
+    <div class="engagement-bar">
+      <div class="eng-label">🔥 Engagement</div>
+      <div class="eng-track"><div class="eng-fill" id="engFill" style="width:50%"></div></div>
+      <div class="eng-val" id="engVal">50%</div>
+    </div>
+
+    <div class="content-card">
+      <!-- INTERVENTION BANNER (Feature 4) — shown when cognitive state needs attention -->
+      <div class="intervention-banner" id="interventionBanner">
+        <div class="intervention-icon" id="interventionIcon"></div>
+        <div id="interventionMsg"></div>
+      </div>
+
+      <div class="hint-box" id="hintBox">💡 Hint: Take your time. Re-read the concept carefully before answering.</div>
+      <div class="break-box" id="breakBox">☕ Suggestion: You seem tired. Take a 2-minute break and come back refreshed!</div>
+
+      <!-- ADAPTIVE LEARNING FEEDBACK COMPONENT -->
+      <div class="adaptive-panel" id="adaptivePanel">
+        <div class="adaptive-header">
+          <div class="adaptive-title">
+            <span class="adaptive-sparkle">✨</span>
+            <span class="adaptive-label">Adaptive Learning Feedback</span>
+          </div>
+          <div class="adaptive-meta">
+            <span class="adaptive-topic-badge" id="adaptiveTopic">Topic: Python Basics</span>
+            <span class="diff-badge diff-easy" id="adaptiveDiffBadge">Easy</span>
+            <span class="adaptive-acc-badge" id="adaptiveAccuracy">Accuracy: --</span>
+          </div>
+        </div>
+        <div class="adaptive-body">
+          <div class="adaptive-action-row">
+            <span class="adaptive-action-tag tag-maintain" id="adaptiveActionTag">🎯 Steady Mastery</span>
+            <span class="adaptive-reason" id="adaptiveReason">Establishing baseline performance. Answer questions to personalize your difficulty level.</span>
+          </div>
+          <div class="adaptive-support-actions" id="adaptiveSupportActions" style="display:none">
+            <button class="adaptive-btn-action" id="adaptiveBreakBtn" onclick="openGame()" style="display:none">☕ Take 2-min Break</button>
+            <button class="adaptive-btn-action" id="adaptiveExampleBtn" onclick="toggleWorkedExample()" style="display:none">📖 View Worked Example</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="content-header">
+        <div class="content-title" id="contentTitle">Select a subject to begin</div>
+        <div class="diff-badge diff-easy" id="diffBadge">Easy</div>
+      </div>
+      <div class="content-body" id="contentBody">Choose a subject from the right panel and start the camera to begin your personalized learning session.</div>
+      <div class="code-block" id="codeBlock" style="display:none"></div>
+
+      <div class="quiz-section" id="quizSection" style="display:none">
+        <div class="quiz-q" id="quizQ"></div>
+        <div class="quiz-opts" id="quizOpts"></div>
+        <div class="quiz-result" id="quizResult"></div>
+        <button class="next-btn" id="nextBtn" onclick="nextContent()">Next Lesson →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="right">
+    <div class="subject-box">
+      <h3>📚 Subjects</h3>
+      <button class="subj-btn active" onclick="setSubject('Python Basics',this)">🐍 Python Basics</button>
+      <button class="subj-btn" onclick="setSubject('Data Science',this)">📊 Data Science</button>
+      <button class="subj-btn" onclick="setSubject('Machine Learning',this)">🤖 Machine Learning</button>
+      <button class="subj-btn" onclick="setSubject('Artificial Intelligence',this)">🧠 Artificial Intelligence</button>
+      <button class="subj-btn" onclick="setSubject('Web Development',this)">🌐 Web Development</button>
+      <button class="subj-btn" onclick="setSubject('Database & SQL',this)">🗄️ Database & SQL</button>
+      <button class="subj-btn" onclick="setSubject('Cybersecurity',this)">🔐 Cybersecurity</button>
+    </div>
+
+    <div class="attention-box">
+      <h3>👁 Attention Score</h3>
+      <div class="att-circle" id="attCircle">--</div>
+      <div class="att-label" id="attLabel">Waiting...</div>
+    </div>
+
+    <div class="stats-box">
+      <h3>📈 Session Stats</h3>
+      <div class="stat-row"><span>Difficulty</span><span class="stat-val" id="statDiff">Easy</span></div>
+      <div class="stat-row"><span>Score</span><span class="stat-val" id="statScore">0%</span></div>
+      <div class="stat-row"><span>Questions</span><span class="stat-val" id="statQ">0</span></div>
+      <div class="stat-row"><span>Correct</span><span class="stat-val" id="statC">0</span></div>
+      <div class="stat-row"><span>Face Detected</span><span class="stat-val" id="statFace">No</span></div>
+      <!-- Recommendation chip (Feature 5) -->
+      <div class="rec-chip" id="recChip"></div>
+    </div>
+
+    <div class="timeline-box">
+      <h3>&#x1F4C8; Session Timeline</h3>
+      <div id="sessionTimeline" class="session-timeline"></div>
+    </div>
+  </div>
+</div>
+
+<!-- RELAXATION GAME MODAL OVERLAY -->
+<div class="game-overlay" id="gameOverlay">
+  <div class="game-modal">
+    <div class="game-header">
+      <div class="game-title">🎮 Brain Recharge Station</div>
+      <button class="game-close-btn" onclick="closeGame()">✕</button>
+    </div>
+    <p style="font-size:12px;color:#aaa;margin-bottom:12px">
+      Feeling stressed or tired? Take a quick 1-minute brain break to reset and recharge your focus!
+    </p>
+    <div class="game-tabs">
+      <button class="gtab active" onclick="switchGame('math',this)">➕ Math</button>
+      <button class="gtab" onclick="switchGame('memory',this)">🧠 Memory</button>
+      <button class="gtab" onclick="switchGame('typing',this)">⌨️ Typing</button>
+      <button class="gtab" onclick="switchGame('snake',this)">🐍 Snake</button>
+    </div>
+    <div class="game-card-body" id="gameArea"></div>
+  </div>
+</div>
+
+
+<!-- USER CALIBRATION MODAL -->
+<div class="calib-modal-overlay" id="calibModal">
+  <div class="calib-modal-card">
+    <h2 style="color:#fff;font-size:20px;font-weight:700">🎯 Quick User Calibration</h2>
+    <p class="calib-inst" style="margin-top:8px">Look directly at your screen in your normal resting learning posture.</p>
+    <div class="calib-count" id="calibCountdown">3</div>
+    <p style="font-size:12px;color:#00C851" id="calibStatus">Calibrating baseline 3D head pose and eye openness...</p>
+  </div>
+</div>
+
+<!-- VIVA TELEMETRY DEBUG DRAWER -->
+<div class="debug-drawer" id="debugDrawer">
+  <div class="debug-header">
+    <div class="debug-title">⚡ Viva Telemetry Debugger</div>
+    <button class="debug-close" onclick="toggleDebugMode()">✕</button>
+  </div>
+  <div class="debug-body">
+    <div class="debug-sec">
+      <h4>Vision & Face Pipeline</h4>
+      <div>Status: <b id="dbgFaceStatus">--</b></div>
+      <div>Quality: <b id="dbgQuality">--</b></div>
+      <div>Angle: <b id="dbgAlignAngle">0.0°</b></div>
+    </div>
+    <div class="debug-sec">
+      <h4>3D Head Pose (solvePnP)</h4>
+      <div>Yaw: <b id="dbgYaw">0.0°</b> | Pitch: <b id="dbgPitch">0.0°</b> | Roll: <b id="dbgRoll">0.0°</b></div>
+      <div>Direction: <b id="dbgDir">forward</b></div>
+    </div>
+    <div class="debug-sec">
+      <h4>Eye Aspect Ratio & Blinks</h4>
+      <div>Left EAR: <b id="dbgEarL">--</b> | Right EAR: <b id="dbgEarR">--</b></div>
+      <div>Mean EAR: <b id="dbgEarAvg">--</b> (<span id="dbgEyeState">open</span>)</div>
+      <div>Blink Rate: <b id="dbgBlinkRate">--</b> /min (Total: <span id="dbgTotalBlinks">0</span>)</div>
+    </div>
+    <div class="debug-sec">
+      <h4>Emotion Probability Distribution</h4>
+      <div id="dbgEmoBars"></div>
+      <div style="margin-top:4px">Stability: <b id="dbgStability">--</b></div>
+    </div>
+    <div class="debug-sec">
+      <h4>Multimodal AI Deductions</h4>
+      <div>State: <b id="dbgCogState">--</b> (Conf: <span id="dbgCogConf">--</span>)</div>
+      <div id="dbgReasons" style="margin-top:4px;color:#aaa"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const EMOJI = {happy:'😄',sad:'😢',angry:'😠',fear:'😨',surprise:'😲',disgust:'🤢',neutral:'😐'};
+const BAR_COLORS = {happy:'#00C851',sad:'#0099CC',angry:'#FF4444',fear:'#AA00FF',surprise:'#FFBB33',disgust:'#FF8800',neutral:'#aaa'};
+
+let sessionId = 'sess_' + Date.now();
+let subject = 'Python Basics';
+let stream = null, interval = null, currentContent = null, quizAnswered = false;
+let gameShown = false, snakeLoop = null, isDebugOpen = false, isCalibrating = false;
+
+document.getElementById('sessionId').textContent = 'Session: ' + sessionId;
+
+// Auto-initialize session & load the initial question on page load
+fetch('/api/session/start', {
+  method: 'POST',
+  headers: {'Content-Type': 'application/json'},
+  body: JSON.stringify({session_id: sessionId, subject: subject})
+}).then(() => {
+  analyzeFrame(null);
+}).catch(err => console.error('Session start error:', err));
+
+function toggleDebugMode(){
+  isDebugOpen = !isDebugOpen;
+  document.getElementById('debugDrawer').className = 'debug-drawer' + (isDebugOpen ? ' open' : '');
+}
+
+async function startCalibration(){
+  if(!stream){
+    alert('Please start camera first before calibrating.');
+    return;
+  }
+  isCalibrating = true;
+  const modal = document.getElementById('calibModal');
+  const countEl = document.getElementById('calibCountdown');
+  modal.className = 'calib-modal-overlay open';
+
+  let count = 3;
+  countEl.textContent = count;
+  const samples = [];
+
+  const timer = setInterval(async () => {
+    count--;
+    if(count > 0){
+      countEl.textContent = count;
+    } else {
+      clearInterval(timer);
+      countEl.textContent = '✓';
+      document.getElementById('calibStatus').textContent = 'Finalizing calibration parameters...';
+
+      // Send last telemetry samples to calibrate endpoint
+      try {
+        const v = document.getElementById('video');
+        const c = document.getElementById('canvas');
+        c.width = v.videoWidth || 640;
+        c.height = v.videoHeight || 480;
+        c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
+        const b64 = c.toDataURL('image/jpeg', 0.85);
+
+        // Fetch analysis to get exact yaw/pitch/ear
+        const res = await fetch('/api/analyze', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({session_id: sessionId, frame: b64})
+        }).then(r => r.json());
+
+        if(res && res.attention){
+          const att = res.attention;
+          const sample = {
+            yaw: att.head_pose?.yaw || 0.0,
+            pitch: att.head_pose?.pitch || 0.0,
+            ear: att.ear_avg || 0.28
+          };
+          await fetch('/api/session/calibrate', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({session_id: sessionId, samples: [sample, sample]})
+          });
+        }
+      } catch(e){ console.error('Calibration error:', e); }
+
+      setTimeout(() => {
+        modal.className = 'calib-modal-overlay';
+        isCalibrating = false;
+        document.getElementById('hudCalib').textContent = 'Calibrated ✓';
+        document.getElementById('hudCalib').style.color = '#00C851';
+      }, 700);
+    }
+  }, 1000);
+}
+
+function setSubject(s, btn){
+  subject = s;
+  document.querySelectorAll('.subj-btn').forEach(b => b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  currentContent = null;
+  fetch('/api/session/start', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({session_id: sessionId, subject: subject})
+  }).then(() => {
+    analyzeFrame(null);
+  }).catch(err => console.error('Subject switch error:', err));
+}
+
+async function toggleCamera(){
+  const btn = document.getElementById('camBtn');
+  if(!stream){
+    try{
+      stream = await navigator.mediaDevices.getUserMedia({video: {width: 640, height: 480}});
+      document.getElementById('video').srcObject = stream;
+      btn.textContent = '⏹ Stop Camera';
+      btn.classList.add('stop');
+      interval = setInterval(captureAndAnalyze, 2000);
+    }catch(e){
+      btn.textContent = '⏹ Stop (Demo Mode)';
+      btn.classList.add('stop');
+      interval = setInterval(() => analyzeFrame(null), 2000);
+    }
+  }else{
+    stream.getTracks().forEach(t => t.stop());
+    stream = null;
+    clearInterval(interval);
+    btn.textContent = '▶ Start Camera';
+    btn.classList.remove('stop');
+  }
+}
+
+function captureAndAnalyze(){
+  if(isCalibrating) return;
+  const v = document.getElementById('video');
+  const c = document.getElementById('canvas');
+  const w = v.videoWidth  || 640;
+  const h = v.videoHeight || 480;
+  c.width  = w;
+  c.height = h;
+  c.getContext('2d').drawImage(v, 0, 0, w, h);
+  analyzeFrame(c.toDataURL('image/jpeg', 0.85));
+}
+
+async function analyzeFrame(frame){
+  try{
+    const body = {session_id: sessionId};
+    if(frame) body.frame = frame;
+    const data = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body)
+    }).then(r => r.json());
+    updateUI(data);
+  }catch(e){console.error('Analysis error:', e);}
+}
+
+function updateUI(data){
+  if(!data) return;
+  const e = data.emotion || {};
+  const att = data.attention || {};
+  const cog = data.cognitive || {};
+  const qual = data.camera_quality || {};
+
+  // ── Camera Quality Status ──
+  const qEl = document.getElementById('camQuality');
+  if(qEl && qual.status){
+    qEl.className = 'quality-pill ' + (qual.status || 'good');
+    qEl.textContent = '● ' + (qual.message ? (qual.status === 'good' ? 'Camera Ready (Good Lighting)' : qual.status.replace('_',' ').toUpperCase()) : 'Camera Ready');
+  }
+
+  // ── Emotion panel ──
+  document.getElementById('emoEmoji').textContent = EMOJI[e.emotion] || '😐';
+  document.getElementById('emoName').textContent = (e.emotion||'neutral').charAt(0).toUpperCase() + (e.emotion||'neutral').slice(1);
+  document.getElementById('emoConf').textContent = 'Confidence: ' + Math.round((e.confidence||0.7)*100) + '%';
+  document.getElementById('statFace').textContent = e.face_detected ? 'Yes ✓' : 'No';
+
+  // Stability pill
+  const stabEl = document.getElementById('emoStability');
+  if(stabEl && e.stability_label){
+    stabEl.style.display = 'inline-block';
+    stabEl.className = 'stability-pill ' + e.stability_label;
+    stabEl.textContent = e.stability_label.toUpperCase() + ' (' + Math.round((e.stability||0)*100) + '%)';
+  }
+
+  // Smoothed tag
+  const smoothedEl = document.getElementById('emoSmoothed');
+  if(smoothedEl){
+    if(e.raw_emotion && e.raw_emotion !== e.emotion){
+      smoothedEl.style.display = 'block';
+      smoothedEl.textContent = '✦ smoothed (raw: ' + e.raw_emotion + ')';
+    } else {
+      smoothedEl.style.display = 'none';
+    }
+  }
+
+  // Emotion bars
+  const bars = document.getElementById('emoBars');
+  if(bars){
+    bars.innerHTML = '';
+    Object.entries(e.all||{}).sort((a,b)=>b[1]-a[1]).forEach(([em,val])=>{
+      bars.innerHTML += `<div class="ebar"><div class="ebar-label">${em}</div><div class="ebar-track"><div class="ebar-fill" style="width:${Math.round(val*100)}%;background:${BAR_COLORS[em]||'#aaa'}"></div></div><div style="font-size:10px;color:#aaa;width:30px">${Math.round(val*100)}%</div></div>`;
+    });
+  }
+
+  // ── Attention & 3D Head Pose HUD ──
+  const attScore = att.attention_score !== undefined ? att.attention_score : 70;
+  const ac = document.getElementById('attCircle');
+  if(ac){
+    ac.textContent = attScore + '%';
+    ac.style.borderColor = attScore > 70 ? '#00C851' : (attScore > 40 ? '#FF8800' : '#FF4444');
+  }
+  const attLbl = document.getElementById('attLabel');
+  if(attLbl){
+    attLbl.textContent = attScore > 70 ? 'High Attention' : (attScore > 40 ? 'Moderate' : 'Low Attention');
+    attLbl.style.color = attScore > 70 ? '#00C851' : (attScore > 40 ? '#FF8800' : '#FF4444');
+  }
+
+  const hp = att.head_pose || {};
+  const hpText = document.getElementById('headPoseText');
+  if(hpText) hpText.textContent = 'Gaze: ' + (att.head_direction || 'forward').toUpperCase() + (att.looking_away ? ' (Looking Away)' : '');
+  const hudP = document.getElementById('hudPose');
+  if(hudP) hudP.textContent = `Y: ${hp.yaw||0}° P: ${hp.pitch||0}°`;
+  const hudE = document.getElementById('hudEye');
+  if(hudE) hudE.textContent = `${(att.eye_state||'open').toUpperCase()} (EAR: ${att.ear_avg||0.28})`;
+  const hudB = document.getElementById('hudBlink');
+  if(hudB) hudB.textContent = `${att.blink_rate||0}/min (${att.total_blinks||0} tot)`;
+  const hudC = document.getElementById('hudCalib');
+  if(hudC && att.is_calibrated){
+    hudC.textContent = 'Calibrated ✓';
+    hudC.style.color = '#00C851';
+  }
+
+  // ── Cognitive state panel with Explainability ──
+  const cogStateEl = document.getElementById('cogState');
+  if(cogStateEl){
+    cogStateEl.textContent = (cog.emoji||'🎯') + ' ' + (cog.name || (cog.state||'engaged')).toUpperCase();
+    cogStateEl.style.color = cog.color || '#00C851';
+  }
+  const cogDescEl = document.getElementById('cogDesc');
+  if(cogDescEl) cogDescEl.textContent = cog.desc || '';
+
+  const reasonsContainer = document.getElementById('cogReasons');
+  if(reasonsContainer){
+    reasonsContainer.innerHTML = '';
+    (cog.reasons || []).slice(0, 3).forEach(r => {
+      reasonsContainer.innerHTML += `<div class="cog-reason-item">💡 ${r}</div>`;
+    });
+  }
+
+  const adaptMsgEl = document.getElementById('adaptMsg');
+  if(adaptMsgEl) adaptMsgEl.textContent = data.adaptation?.reason || data.content?.adaptation?.msg || 'Adaptive learning engine active.';
+
+  // ── Engagement bar ──
+  const eng = data.engagement !== undefined ? data.engagement : 50;
+  const engFill = document.getElementById('engFill');
+  const engVal = document.getElementById('engVal');
+  if(engFill) engFill.style.width = eng + '%';
+  if(engVal) engVal.textContent = eng + '%';
+
+  // ── Session stats ──
+  const s = data.stats || {};
+  const statDiff = document.getElementById('statDiff');
+  if(statDiff) statDiff.textContent = (s.difficulty||'easy').charAt(0).toUpperCase() + (s.difficulty||'easy').slice(1);
+  const statScore = document.getElementById('statScore');
+  if(statScore) statScore.textContent = (s.performance||0) + '%';
+  const statQ = document.getElementById('statQ');
+  if(statQ) statQ.textContent = s.total || 0;
+  const statC = document.getElementById('statC');
+  if(statC) statC.textContent = s.correct || 0;
+
+  // ── Load question content if it changed ──
+  const c = data.content;
+  if(c && c.id !== (currentContent?.id)){
+    currentContent = c;
+    loadContent(c);
+  }
+
+  const adapt = c?.adaptation || {};
+  const hintBox = document.getElementById('hintBox');
+  if(hintBox) hintBox.className = 'hint-box' + (adapt.hint ? ' show' : '');
+  const breakBox = document.getElementById('breakBox');
+  if(breakBox) breakBox.className = 'break-box' + (adapt.break ? ' show' : '');
+
+  const diff = s.difficulty || 'easy';
+  const db = document.getElementById('diffBadge');
+  if(db){
+    db.textContent = diff.charAt(0).toUpperCase() + diff.slice(1);
+    db.className = 'diff-badge diff-' + diff;
+  }
+
+  if(e.emotion && cog.state){
+    addTimeline(e.emotion, cog.state, cog.color || '#00C851');
+  }
+
+  // ── Intervention banner ──
+  const iv = data.intervention || {};
+  const banner = document.getElementById('interventionBanner');
+  if(banner){
+    if(iv.active){
+      banner.className = 'intervention-banner show ' + (iv.type || '');
+      document.getElementById('interventionIcon').textContent = iv.icon || '';
+      document.getElementById('interventionMsg').textContent = iv.message || '';
+    } else {
+      banner.className = 'intervention-banner';
+    }
+  }
+
+  // ── Recommendation chip ──
+  const recChip = document.getElementById('recChip');
+  if(recChip){
+    if(data.recommendation && data.recommendation !== ''){
+      recChip.textContent = '💡 ' + data.recommendation;
+      recChip.className = 'rec-chip show';
+    } else {
+      recChip.className = 'rec-chip';
+    }
+  }
+
+  // ── ML Prediction panel ──
+  if(typeof updateMLPredUI === 'function'){
+    updateMLPredUI(data.ml_prediction);
+  }
+
+  // ── Adaptive Feedback UI ──
+  if(data.adaptive_decision){
+    updateAdaptiveFeedbackUI(data.adaptive_decision, data.adaptation?.difficulty, data.stats?.performance);
+  }
+
+  // ── Viva Debug Drawer telemetry updates ──
+  if(isDebugOpen){
+    document.getElementById('dbgFaceStatus').textContent = e.face_status || 'single_face';
+    document.getElementById('dbgQuality').textContent = `${qual.status||'good'} (B:${qual.brightness||0}, Sh:${qual.blur_score||0})`;
+    document.getElementById('dbgAlignAngle').textContent = `${e.alignment?.angle_deg || 0}°`;
+    document.getElementById('dbgYaw').textContent = `${hp.yaw || 0}°`;
+    document.getElementById('dbgPitch').textContent = `${hp.pitch || 0}°`;
+    document.getElementById('dbgRoll').textContent = `${hp.roll || 0}°`;
+    document.getElementById('dbgDir').textContent = hp.direction || 'forward';
+    document.getElementById('dbgEarL').textContent = att.ear_left || '--';
+    document.getElementById('dbgEarR').textContent = att.ear_right || '--';
+    document.getElementById('dbgEarAvg').textContent = att.ear_avg || '--';
+    document.getElementById('dbgEyeState').textContent = att.eye_state || 'open';
+    document.getElementById('dbgBlinkRate').textContent = att.blink_rate || '0';
+    document.getElementById('dbgTotalBlinks').textContent = att.total_blinks || '0';
+    document.getElementById('dbgStability').textContent = `${e.stability_label || 'stable'} (${Math.round((e.stability||0)*100)}%)`;
+    document.getElementById('dbgCogState').textContent = (cog.state||'engaged').toUpperCase();
+    document.getElementById('dbgCogConf').textContent = `${Math.round((cog.confidence||0.75)*100)}%`;
+
+    const dbgReasonsEl = document.getElementById('dbgReasons');
+    if(dbgReasonsEl){
+      dbgReasonsEl.innerHTML = (cog.reasons||[]).map(r => `• ${r}`).join('<br>');
+    }
+    const dbgBars = document.getElementById('dbgEmoBars');
+    if(dbgBars){
+      dbgBars.innerHTML = '';
+      Object.entries(e.raw_all || e.all || {}).forEach(([k, v]) => {
+        dbgBars.innerHTML += `<div style="display:flex;justify-content:space-between"><span>${k}:</span><b>${Math.round(v*100)}%</b></div>`;
+      });
+    }
+  }
+
+  if(data.show_game && !gameShown){ gameShown = true; openGame(); }
+}
+
+function loadContent(c){
+  document.getElementById('contentTitle').textContent=c.title||'';
+  document.getElementById('contentBody').textContent=c.body||'';
+  const cb=document.getElementById('codeBlock');
+  if(c.code){cb.textContent=c.code;cb.style.display='block';}else cb.style.display='none';
+  quizAnswered=false;
+  questionStartTime=Date.now();  // Reset timer when a new question loads
+  const qs=document.getElementById('quizSection');
+  if(c.quiz){
+    qs.style.display='block';
+    document.getElementById('quizQ').textContent=c.quiz.q;
+    const opts=document.getElementById('quizOpts'); opts.innerHTML='';
+    c.quiz.opts.forEach((opt,i)=>{ opts.innerHTML+=`<button class="quiz-opt" onclick="answerQuiz(${i},${c.quiz.ans})">${opt}</button>`; });
+    document.getElementById('quizResult').className='quiz-result';
+    document.getElementById('nextBtn').className='next-btn';
+  }else qs.style.display='none';
+}
+
+// Track when a question was displayed so we can measure response time
+let questionStartTime = Date.now();
+
+async function answerQuiz(chosen,correct){
+  if(quizAnswered) return; quizAnswered=true;
+
+  const timeTaken = Math.round((Date.now() - questionStartTime) / 1000);
+
+  const opts=document.querySelectorAll('.quiz-opt');
+  opts[chosen].classList.add(chosen===correct?'correct':'wrong');
+  opts[correct].classList.add('correct');
+  const isCorrect=chosen===correct;
+  const res=document.getElementById('quizResult');
+  res.textContent=isCorrect?'✅ Correct! Well done!':'❌ Wrong. The correct answer is highlighted.';
+  res.className='quiz-result show '+(isCorrect?'ok':'fail');
+  document.getElementById('nextBtn').className='next-btn show';
+
+  // Collect question context for AI explanation (Feature 3)
+  const correctOptionText = currentContent?.quiz?.opts?.[correct] || '';
+  const chosenOptionText  = currentContent?.quiz?.opts?.[chosen]  || '';
+
+  // Send to backend and get XP data back
+  const data = await fetch('/api/quiz',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      session_id:     sessionId,
+      correct:        isCorrect,
+      time_taken:     timeTaken,
+      // Feature 3 — AI explanation fields
+      question_title: currentContent?.title  || '',
+      question_body:  currentContent?.body   || '',
+      correct_answer: correctOptionText,
+      chosen_answer:  chosenOptionText,
+    })
+  }).then(r=>r.json()).catch(()=>({}));
+
+  // Feature 3 — show AI explanation on wrong answer
+  if (!isCorrect && data.explanation && data.explanation.explanation) {
+    const exp = data.explanation;
+    const expBox = document.createElement('div');
+    expBox.style.cssText = 'margin-top:10px;padding:12px;background:#0d1117;border-radius:8px;border-left:3px solid #FF8800;font-size:13px;color:#ccc;line-height:1.6';
+    expBox.innerHTML =
+      `<div style="color:#FF8800;font-weight:700;margin-bottom:6px">🤖 AI Explanation ${ exp.source === 'gemini' ? '<span style="font-size:10px;color:#555">(Gemini)</span>' : '' }</div>` +
+      `<div>${exp.explanation}</div>` +
+      (exp.tip ? `<div style="margin-top:8px;color:#FFBB33;font-size:12px">💡 Tip: ${exp.tip}</div>` : '');
+    document.getElementById('quizResult').after(expBox);
+  }
+
+  // Update XP bar if user is logged in (Phase 1)
+  if(data.xp_earned !== undefined){
+    const prevLevel = _userLevel;
+    _userXP     = data.total_xp || _userXP;
+    _userLevel  = data.level    || _userLevel;
+    _xpPercent  = data.xp_percent !== undefined ? data.xp_percent : _xpPercent;
+
+    // Animate the XP fill bar
+    const fill = document.getElementById('xpFill');
+    const val  = document.getElementById('xpVal');
+    if(fill) fill.style.width = _xpPercent + '%';
+    if(val)  val.textContent  = _userXP;
+
+    // Show XP toast
+    const levelUp = data.level > prevLevel;
+    showXPToast(data.xp_earned, levelUp, data.level_name, data.streak_bonus);
+  }
+
+  // Update Adaptive Feedback UI from quiz answer evaluation
+  if(data.adaptive_decision){
+    updateAdaptiveFeedbackUI(data.adaptive_decision, data.current_difficulty, data.score);
+  }
+}
+
+// ── Adaptive Feedback UI Helper Functions ───────────────────────────────────
+function updateAdaptiveFeedbackUI(decision, currentDiff, recentAcc) {
+  if (!decision) return;
+  const panel = document.getElementById('adaptivePanel');
+  if (!panel) return;
+
+  const topicEl = document.getElementById('adaptiveTopic');
+  const diffEl = document.getElementById('adaptiveDiffBadge');
+  const accEl = document.getElementById('adaptiveAccuracy');
+  const tagEl = document.getElementById('adaptiveActionTag');
+  const reasonEl = document.getElementById('adaptiveReason');
+  const breakBtn = document.getElementById('adaptiveBreakBtn');
+  const exampleBtn = document.getElementById('adaptiveExampleBtn');
+  const actionsWrap = document.getElementById('adaptiveSupportActions');
+
+  if (topicEl && decision.topic) topicEl.textContent = 'Topic: ' + decision.topic;
+  if (diffEl) {
+    const diff = (decision.recommended_difficulty || currentDiff || 'easy').toLowerCase();
+    diffEl.textContent = diff.charAt(0).toUpperCase() + diff.slice(1);
+    diffEl.className = 'diff-badge diff-' + diff;
+  }
+  if (accEl && recentAcc !== undefined && recentAcc !== null) {
+    accEl.textContent = 'Accuracy: ' + recentAcc + '%';
+  }
+
+  const act = decision.action || 'maintain_difficulty';
+  panel.className = 'adaptive-panel';
+
+  if (act === 'increase_difficulty') {
+    panel.classList.add('action-advance');
+    tagEl.className = 'adaptive-action-tag tag-advance';
+    tagEl.textContent = '🚀 Advancing Level';
+  } else if (act === 'reduce_difficulty') {
+    panel.classList.add('action-scaffold');
+    tagEl.className = 'adaptive-action-tag tag-support';
+    tagEl.textContent = '🛠️ Foundational Scaffolding';
+  } else if (act === 'guided_practice' || act === 'hint_or_example') {
+    panel.classList.add('action-support');
+    tagEl.className = 'adaptive-action-tag tag-support';
+    tagEl.textContent = '💡 Guided Practice';
+  } else if (act === 'suggest_break') {
+    panel.classList.add('action-break');
+    tagEl.className = 'adaptive-action-tag tag-break';
+    tagEl.textContent = '☕ Rest Recommendation';
+  } else if (act === 'recommend_revision') {
+    panel.classList.add('action-revision');
+    tagEl.className = 'adaptive-action-tag tag-revision';
+    tagEl.textContent = '🔄 Retention Revision';
+  } else {
+    tagEl.className = 'adaptive-action-tag tag-maintain';
+    tagEl.textContent = '🎯 Steady Mastery';
+  }
+
+  if (reasonEl && decision.reason) {
+    reasonEl.textContent = decision.reason;
+  }
+
+  let hasActions = false;
+  if (breakBtn) {
+    if (act === 'suggest_break' || decision.support_type === 'rest_break') {
+      breakBtn.style.display = 'inline-block';
+      hasActions = true;
+    } else {
+      breakBtn.style.display = 'none';
+    }
+  }
+  if (exampleBtn) {
+    if (decision.support_type === 'worked_example' || act === 'guided_practice') {
+      exampleBtn.style.display = 'inline-block';
+      hasActions = true;
+    } else {
+      exampleBtn.style.display = 'none';
+    }
+  }
+  if (actionsWrap) {
+    actionsWrap.style.display = hasActions ? 'flex' : 'none';
+  }
+}
+
+function toggleWorkedExample() {
+  const cb = document.getElementById('codeBlock');
+  if (cb) {
+    if (cb.style.display === 'none' || !cb.style.display) {
+      cb.style.display = 'block';
+    } else {
+      cb.style.display = 'none';
+    }
+  }
+}
+
+// Show a floating XP notification toast
+function showXPToast(xpEarned, levelUp, levelName, streakBonus){
+  const toast = document.createElement('div');
+  toast.className = 'xp-toast' + (levelUp ? ' levelup' : '');
+
+  let msg = '+ ' + xpEarned + ' XP';
+  if(streakBonus > 0) msg += '  +' + streakBonus + ' Streak Bonus!';
+  if(levelUp)         msg = '🎉 Level Up! ' + levelName + '  ' + msg;
+
+  toast.textContent = msg;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 2600);
+}
+
+async function nextContent(){
+  quizAnswered=false; currentContent=null;
+  document.getElementById('quizResult').className='quiz-result';
+  document.getElementById('nextBtn').className='next-btn';
+  // Remove AI explanation box if present
+  const expBox = document.getElementById('quizResult').nextElementSibling;
+  if (expBox && expBox.style.borderLeft) expBox.remove();
+  document.getElementById('contentTitle').textContent='Loading next lesson...';
+  document.getElementById('contentBody').textContent='';
+  document.getElementById('codeBlock').style.display='none';
+  document.getElementById('quizSection').style.display='none';
+  setTimeout(()=>analyzeFrame(null),300);
+}
+
+function addTimeline(emotion,cogState,color){
+  const list=document.getElementById('sessionTimeline');
+  const item=document.createElement('div'); item.className='tl-item';
+  item.innerHTML=`<div class="tl-dot" style="background:${color}"></div><div class="tl-info"><b>${EMOJI[emotion]||'😐'} ${emotion}</b> → ${cogState}</div><div class="tl-time">${new Date().toLocaleTimeString()}</div>`;
+  list.insertBefore(item,list.firstChild);
+  if(list.children.length>20) list.removeChild(list.lastChild);
+}
+
+// ── GAME SYSTEM ──────────────────────────────────────────────────────────────
+function openGame(){ document.getElementById('gameOverlay').classList.add('show'); switchGame('math',document.querySelector('.gtab')); }
+function closeGame(){
+  document.getElementById('gameOverlay').classList.remove('show');
+  if(snakeLoop){clearInterval(snakeLoop);snakeLoop=null;}
+  gameShown=false;  // allow game to trigger again next boredom event
+  fetch('/api/game/closed',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:sessionId})});
+}
+
+function switchGame(type,btn){
+  document.querySelectorAll('.gtab').forEach(b=>b.classList.remove('active')); btn.classList.add('active');
+  if(snakeLoop){clearInterval(snakeLoop);snakeLoop=null;}
+  const area=document.getElementById('gameArea');
+  if(type==='math') startMath(area);
+  else if(type==='memory') startMemory(area);
+  else if(type==='typing') startTyping(area);
+  else if(type==='snake') startSnake(area);
+}
+
+// Math Game
+function startMath(area){
+  let score=0,total=0;
+  function newQ(){
+    const a=Math.floor(Math.random()*12)+1, b=Math.floor(Math.random()*12)+1;
+    const ops=['+','-','×']; const op=ops[Math.floor(Math.random()*3)];
+    const ans=op==='+'?a+b:op==='-'?a-b:a*b;
+    const wrong=[ans+Math.ceil(Math.random()*5),ans-Math.ceil(Math.random()*5),ans+Math.ceil(Math.random()*10)].filter(x=>x!==ans);
+    const opts=[ans,...wrong.slice(0,3)].sort(()=>Math.random()-0.5);
+    area.innerHTML=`<div class="math-q">${a} ${op} ${b} = ?</div><div class="math-opts">${opts.map(o=>`<button class="math-opt" onclick="mathAns(this,${o},${ans})">${o}</button>`).join('')}</div><div class="math-score">Score: ${score}/${total}</div>`;
+  }
+  window.mathAns=function(btn,chosen,ans){
+    total++;
+    if(chosen===ans){score++;btn.classList.add('correct');}else{btn.classList.add('wrong');area.querySelectorAll('.math-opt').forEach(b=>{if(parseInt(b.textContent)===ans)b.classList.add('correct');});}
+    document.querySelector('.math-score').textContent=`Score: ${score}/${total}`;
+    setTimeout(newQ,900);
+  };
+  newQ();
+}
+
+// Memory Game
+function startMemory(area){
+  const icons=['🍎','🍎','🚀','🚀','🎯','🎯','💡','💡','🔥','🔥','⭐','⭐','🎮','🎮','🌈','🌈'];
+  const cards=[...icons].sort(()=>Math.random()-0.5);
+  let flipped=[],matched=0,lock=false;
+  area.innerHTML=`<div style="font-size:13px;color:#aaa;margin-bottom:6px">Match all pairs!</div><div class="mem-grid">${cards.map((_,i)=>`<div class="mem-card" data-i="${i}" onclick="memFlip(${i})"></div>`).join('')}</div>`;
+  window.memFlip=function(i){
+    if(lock||flipped.includes(i)||document.querySelector(`.mem-card[data-i="${i}"]`).classList.contains('matched')) return;
+    const el=document.querySelector(`.mem-card[data-i="${i}"]`);
+    el.textContent=cards[i]; el.classList.add('flip'); flipped.push(i);
+    if(flipped.length===2){
+      lock=true;
+      if(cards[flipped[0]]===cards[flipped[1]]){
+        document.querySelectorAll(`.mem-card[data-i="${flipped[0]}"],.mem-card[data-i="${flipped[1]}"]`).forEach(e=>{e.classList.remove('flip');e.classList.add('matched');});
+        matched+=2; flipped=[]; lock=false;
+        if(matched===cards.length) setTimeout(()=>startMemory(area),1000);
+      }else{
+        setTimeout(()=>{
+          flipped.forEach(fi=>{const e=document.querySelector(`.mem-card[data-i="${fi}"]`);e.textContent='';e.classList.remove('flip');});
+          flipped=[]; lock=false;
+        },800);
+      }
+    }
+  };
+}
+
+// Typing Game
+function startTyping(area){
+  const words=['python','neural','data','model','array','flask','class','loop','debug','train'];
+  let score=0,timeLeft=30,timerRef;
+  function newWord(){
+    const w=words[Math.floor(Math.random()*words.length)];
+    area.querySelector('.type-word').textContent=w;
+    area.querySelector('.type-input').value='';
+    area.querySelector('.type-input').focus();
+    area.querySelector('.type-input').dataset.word=w;
+  }
+  area.innerHTML=`<div class="type-word">---</div><input class="type-input" placeholder="Type the word..." oninput="typeCheck(this)"><div class="type-timer">⏱ ${timeLeft}s</div><div class="type-score">Score: 0</div>`;
+  window.typeCheck=function(inp){
+    if(inp.value.toLowerCase()===inp.dataset.word){score++;area.querySelector('.type-score').textContent='Score: '+score;newWord();}
+  };
+  timerRef=setInterval(()=>{
+    timeLeft--; if(area.querySelector('.type-timer')) area.querySelector('.type-timer').textContent='⏱ '+timeLeft+'s';
+    if(timeLeft<=0){clearInterval(timerRef);area.innerHTML=`<div style="text-align:center;padding:40px"><div style="font-size:48px">🎉</div><div style="font-size:24px;color:#00C851;margin:10px">Score: ${score}</div><button onclick="startTyping(document.getElementById('gameArea'))" style="padding:10px 20px;background:#FF8800;border:none;border-radius:8px;color:#fff;cursor:pointer;font-size:14px">Play Again</button></div>`;}
+  },1000);
+  newWord();
+}
+
+// Snake Game
+function startSnake(area){
+  area.innerHTML=`<canvas id="snakeCanvas" width="300" height="240"></canvas><div class="snake-score">Score: <span id="snakeScore">0</span></div><div class="snake-ctrl"><button onclick="snakeDir('ArrowUp')">▲</button><button onclick="snakeDir('ArrowLeft')">◀</button><button onclick="snakeDir('ArrowDown')">▼</button><button onclick="snakeDir('ArrowRight')">▶</button></div>`;
+  const cv=document.getElementById('snakeCanvas'),ctx=cv.getContext('2d');
+  const SZ=20; let snake=[{x:7,y:6}],dir={x:1,y:0},food=rndFood(),score=0,alive=true;
+  function rndFood(){return{x:Math.floor(Math.random()*15),y:Math.floor(Math.random()*12)};}
+  window.snakeDir=function(k){if(k==='ArrowUp'&&dir.y===0)dir={x:0,y:-1};else if(k==='ArrowDown'&&dir.y===0)dir={x:0,y:1};else if(k==='ArrowLeft'&&dir.x===0)dir={x:-1,y:0};else if(k==='ArrowRight'&&dir.x===0)dir={x:1,y:0};};
+  document.onkeydown=e=>snakeDir(e.key);
+  snakeLoop=setInterval(()=>{
+    if(!alive||!document.getElementById('snakeCanvas')){clearInterval(snakeLoop);return;}
+    const head={x:snake[0].x+dir.x,y:snake[0].y+dir.y};
+    if(head.x<0||head.x>=15||head.y<0||head.y>=12||snake.some(s=>s.x===head.x&&s.y===head.y)){alive=false;ctx.fillStyle='#FF4444';ctx.font='20px sans-serif';ctx.fillText('Game Over! Score:'+score,30,120);clearInterval(snakeLoop);snakeLoop=null;return;}
+    snake.unshift(head);
+    if(head.x===food.x&&head.y===food.y){score++;food=rndFood();if(document.getElementById('snakeScore'))document.getElementById('snakeScore').textContent=score;}
+    else snake.pop();
+    ctx.fillStyle='#0d1117';ctx.fillRect(0,0,300,240);
+    ctx.fillStyle='#FF4444';ctx.fillRect(food.x*SZ,food.y*SZ,SZ-2,SZ-2);
+    snake.forEach((s,i)=>{ctx.fillStyle=i===0?'#00C851':'#00883a';ctx.fillRect(s.x*SZ,s.y*SZ,SZ-2,SZ-2);});
+  },150);
+}
+// ── HAND GESTURE DETECTION (MediaPipe Hands) ────────────────────────────────
+// Classifies hand pose into: open_palm, fist, pointing, thumbs_up, thumbs_down, fidget, none
+// Sends gesture to /api/hand-gesture every 1.5s
+// Updates the Cognitive Effort score in real-time
+
+const GESTURE_INFO = {
+  open_palm:   { icon: '✋', name: 'Open Palm',   desc: 'Relaxed — low cognitive effort',      color: '#00C851' },
+  pointing:    { icon: '☝️', name: 'Pointing',    desc: 'Focused — moderate effort',           color: '#0099CC' },
+  thumbs_up:   { icon: '👍', name: 'Thumbs Up',   desc: 'Positive — low effort',               color: '#00C851' },
+  thumbs_down: { icon: '👎', name: 'Thumbs Down', desc: 'Frustrated — high effort',            color: '#FF8800' },
+  fist:        { icon: '✊', name: 'Fist',        desc: 'Tense / stressed — very high effort',  color: '#FF4444' },
+  fidget:      { icon: '🤲', name: 'Fidgeting',   desc: 'Restless — high cognitive load',      color: '#FF8800' },
+  none:        { icon: '✋', name: 'No Hand',    desc: 'Show your hand to the camera',        color: '#555' },
+};
+
+let _mpHands = null, _lastGesture = 'none', _gestureTimer = null;
+
+function classifyGesture(landmarks) {
+  // landmarks: array of 21 {x,y,z} points from MediaPipe
+  const lm = landmarks;
+
+  // Helper: is finger extended? (tip y < pip y in image coords)
+  const extended = (tip, pip) => lm[tip].y < lm[pip].y;
+
+  const indexUp  = extended(8,  6);
+  const middleUp = extended(12, 10);
+  const ringUp   = extended(16, 14);
+  const pinkyUp  = extended(20, 18);
+  const thumbUp  = lm[4].x < lm[3].x;  // rough thumb check (left hand)
+
+  const allClosed = !indexUp && !middleUp && !ringUp && !pinkyUp;
+  const allOpen   = indexUp && middleUp && ringUp && pinkyUp;
+
+  if (allOpen)                                    return 'open_palm';
+  if (allClosed && lm[4].y < lm[3].y)            return 'thumbs_up';
+  if (allClosed && lm[4].y > lm[3].y + 0.05)     return 'thumbs_down';
+  if (allClosed)                                  return 'fist';
+  if (indexUp && !middleUp && !ringUp && !pinkyUp) return 'pointing';
+  return 'open_palm';  // default for partial open
+}
+
+function initHandTracking() {
+  if (typeof Hands === 'undefined') {
+    console.log('[Hands] MediaPipe not loaded, skipping hand tracking');
+    return;
+  }
+  const videoEl = document.getElementById('video');
+  const canvas  = document.getElementById('handCanvas');
+  const ctx     = canvas.getContext('2d');
+
+  _mpHands = new Hands({ locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}` });
+  _mpHands.setOptions({ maxNumHands: 1, modelComplexity: 0, minDetectionConfidence: 0.6, minTrackingConfidence: 0.5 });
+
+  _mpHands.onResults(results => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#0d1117';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+      const lm      = results.multiHandLandmarks[0];
+      const gesture = classifyGesture(lm);
+      _lastGesture  = gesture;
+
+      // Draw skeleton on canvas
+      const CONNECTIONS = [[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],
+                           [0,9],[9,10],[10,11],[11,12],[0,13],[13,14],[14,15],[15,16],
+                           [0,17],[17,18],[18,19],[19,20],[5,9],[9,13],[13,17]];
+      ctx.strokeStyle = '#00C851'; ctx.lineWidth = 1.5;
+      CONNECTIONS.forEach(([a,b]) => {
+        ctx.beginPath();
+        ctx.moveTo(lm[a].x * canvas.width, lm[a].y * canvas.height);
+        ctx.lineTo(lm[b].x * canvas.width, lm[b].y * canvas.height);
+        ctx.stroke();
+      });
+      lm.forEach(p => {
+        ctx.beginPath();
+        ctx.arc(p.x * canvas.width, p.y * canvas.height, 3, 0, 2*Math.PI);
+        ctx.fillStyle = '#00ff88'; ctx.fill();
+      });
+
+      updateHandUI(gesture);
+    } else {
+      _lastGesture = 'none';
+      ctx.fillStyle = '#333'; ctx.font = '12px Inter';
+      ctx.fillText('No hand detected', 60, 65);
+      updateHandUI('none');
+    }
+  });
+
+  // Process hand every 1.5s when camera is running
+  _gestureTimer = setInterval(async () => {
+    if (!stream || !videoEl.readyState) return;
+    try { await _mpHands.send({ image: videoEl }); } catch(e) {}
+    // Send gesture to backend
+    sendGestureToBackend(_lastGesture);
+  }, 1500);
+}
+
+function updateHandUI(gesture) {
+  const info = GESTURE_INFO[gesture] || GESTURE_INFO['none'];
+  document.getElementById('handIcon').textContent        = info.icon;
+  document.getElementById('handGestureName').textContent = info.name;
+  document.getElementById('handGestureName').style.color = info.color;
+  document.getElementById('handGestureDesc').textContent = info.desc;
+}
+
+async function sendGestureToBackend(gesture) {
+  try {
+    const res = await fetch('/api/hand-gesture', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: sessionId, gesture })
+    }).then(r => r.json());
+    // Update effort UI from gesture response
+    if (res.effort_score !== undefined) updateEffortUI({
+      score: res.effort_score, zone: res.effort_zone,
+      color: res.effort_color, label: res.effort_zone,
+      components: {}, intervention: null
+    });
+  } catch(e) {}
+}
+
+function updateEffortUI(effort) {
+  if (!effort || effort.score === undefined) return;
+  const score = effort.score;
+  const color = effort.color || '#00C851';
+
+  const scoreEl = document.getElementById('effortScore');
+  const labelEl = document.getElementById('effortLabel');
+  const fillEl  = document.getElementById('effortFill');
+  const compEl  = document.getElementById('effortComponents');
+  const intEl   = document.getElementById('effortIntervention');
+
+  if (scoreEl) { scoreEl.textContent = score; scoreEl.style.color = color; }
+  if (labelEl) { labelEl.textContent = effort.label || effort.zone || ''; labelEl.style.color = color; }
+  if (fillEl)  { fillEl.style.width = score + '%'; fillEl.style.background = color; }
+
+  // Component breakdown bars
+  if (compEl && effort.components) {
+    const COMP_LABELS = {
+      response_time: 'Response Time', error_streak: 'Error Streak',
+      hesitation: 'Hesitation', emotion_arousal: 'Emotion',
+      difficulty: 'Difficulty', hand_gesture: '✋ Hand Gesture'
+    };
+    compEl.innerHTML = Object.entries(effort.components).map(([k, v]) =>
+      `<div class="ec-row">
+        <div class="ec-label">${COMP_LABELS[k] || k}</div>
+        <div class="ec-track"><div class="ec-fill" style="width:${v}%;background:${v>70?'#FF4444':v>40?'#FF8800':'#00C851'}"></div></div>
+        <div style="font-size:10px;color:#aaa;width:28px">${v}%</div>
+      </div>`
+    ).join('');
+  }
+
+  // Intervention message
+  if (intEl && effort.intervention) {
+    intEl.textContent = effort.intervention.icon + ' ' + effort.intervention.message;
+    intEl.className = 'effort-intervention show';
+    intEl.style.borderLeftColor = color;
+  } else if (intEl) {
+    intEl.className = 'effort-intervention';
+  }
+}
+
+// ── EYE TRACKING — Gaze Focus Detection (MediaPipe Face Mesh) ──────────────────────
+const GAZE_INFO_UNUSED = {
+  content:  { icon: '👀', name: 'Reading Content',  desc: 'Focused on lesson',    color: '#00C851' },
+  code:     { icon: '👀', name: 'Reading Code',     desc: 'Studying code block',  color: '#00C851' },
+  question: { icon: '👀', name: 'Reading Question', desc: 'Focused on quiz',      color: '#0099CC' },
+  away:     { icon: '👁️', name: 'Looking Away',    desc: 'Attention lost!',      color: '#FF4444' },
+  unknown:  { icon: '👁', name: 'Detecting...',    desc: 'Tracking gaze',        color: '#aaa'    },
+};
+
+function _initEyeTracking_removed() {
+  if (typeof FaceMesh === 'undefined') {
+    console.warn('[EyeTrack] MediaPipe FaceMesh not loaded — check CDN');
+    document.getElementById('gazeDesc').textContent = 'FaceMesh library failed to load';
+    return;
+  }
+
+  // Clear any previous interval from a prior camera session
+  if (_gazeInterval) { clearInterval(_gazeInterval); _gazeInterval = null; }
+  // Destroy old instance so options are re-applied cleanly
+  _faceMesh = null;
+
+  const videoEl = document.getElementById('video');
+  const canvas  = document.getElementById('gazeCanvas');
+  const ctx     = canvas.getContext('2d');
+
+  _faceMesh = new FaceMesh({ locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${f}` });
+  // refineLandmarks:true is REQUIRED to get iris landmarks (indices 468-477)
+  _faceMesh.setOptions({
+    maxNumFaces: 1,
+    refineLandmarks: true,
+    minDetectionConfidence: 0.5,
+    minTrackingConfidence: 0.5
+  });
+
+  _faceMesh.onResults(results => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#0d1117';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    if (!results.multiFaceLandmarks || !results.multiFaceLandmarks.length) {
+      ctx.fillStyle = '#555'; ctx.font = '11px Inter';
+      ctx.fillText('No face detected', 70, 45);
+      updateGazeUI('unknown');
+      return;
+    }
+
+    const lm = results.multiFaceLandmarks[0];
+
+    // Iris landmarks 468 & 473 only exist when refineLandmarks:true loads successfully
+    const leftIris  = lm[468];
+    const rightIris = lm[473];
+
+    if (!leftIris || !rightIris) {
+      // refineLandmarks model didn't load — fall back to eye-corner midpoint
+      // Left eye corners: 33 (outer), 133 (inner) | Right eye corners: 362 (inner), 263 (outer)
+      const leftEyeMid  = { x: (lm[33].x  + lm[133].x) / 2, y: (lm[33].y  + lm[133].y) / 2 };
+      const rightEyeMid = { x: (lm[362].x + lm[263].x) / 2, y: (lm[362].y + lm[263].y) / 2 };
+      ctx.fillStyle = '#FF8800';
+      ctx.beginPath(); ctx.arc(leftEyeMid.x  * canvas.width, leftEyeMid.y  * canvas.height, 4, 0, 2*Math.PI); ctx.fill();
+      ctx.beginPath(); ctx.arc(rightEyeMid.x * canvas.width, rightEyeMid.y * canvas.height, 4, 0, 2*Math.PI); ctx.fill();
+      ctx.fillStyle = '#FF8800'; ctx.font = '10px Inter';
+      ctx.fillText('Iris model loading...', 60, canvas.height - 8);
+      updateGazeUI('unknown');
+      return;
+    }
+
+    // ── Gaze classification using iris position relative to eye corners ──────
+    // This is robust: we measure how far the iris is from the eye center,
+    // rather than using absolute frame coordinates (which were too strict before).
+
+    // Left eye: outer corner=33, inner corner=133
+    // Right eye: inner corner=362, outer corner=263
+    const leftEyeW  = Math.abs(lm[133].x - lm[33].x)  || 0.01;
+    const rightEyeW = Math.abs(lm[263].x - lm[362].x) || 0.01;
+
+    // Iris offset from eye center (-1=far left, 0=center, +1=far right)
+    const leftOffset  = ((leftIris.x  - (lm[33].x  + lm[133].x) / 2)) / leftEyeW;
+    const rightOffset = ((rightIris.x - (lm[362].x + lm[263].x) / 2)) / rightEyeW;
+    const avgOffset   = (leftOffset + rightOffset) / 2;
+
+    // Vertical: iris Y relative to eye height
+    const leftEyeH   = Math.abs(lm[159].y - lm[145].y) || 0.01;  // top=159, bottom=145
+    const leftVertOff = (leftIris.y - (lm[159].y + lm[145].y) / 2) / leftEyeH;
+
+    // Thresholds: |offset| > 0.35 = looking sideways, vertOff < -0.3 = looking up
+    const lookingSideways = Math.abs(avgOffset) > 0.35;
+    const lookingUp       = leftVertOff < -0.3;
+    const lookingAway     = lookingSideways || lookingUp;
+
+    let gazeZone;
+    if (lookingAway) {
+      gazeZone = 'away';
+    } else if (leftVertOff < -0.1) {
+      gazeZone = 'question';  // slightly upward = reading question at top
+    } else {
+      gazeZone = 'content';
+    }
+
+    // Draw iris dots
+    ctx.fillStyle = '#00C851';
+    ctx.beginPath(); ctx.arc(leftIris.x  * canvas.width, leftIris.y  * canvas.height, 5, 0, 2*Math.PI); ctx.fill();
+    ctx.beginPath(); ctx.arc(rightIris.x * canvas.width, rightIris.y * canvas.height, 5, 0, 2*Math.PI); ctx.fill();
+
+    // Draw gaze direction indicator
+    const cx = ((leftIris.x + rightIris.x) / 2) * canvas.width;
+    const cy = ((leftIris.y + rightIris.y) / 2) * canvas.height;
+    const arrowColor = lookingAway ? '#FF4444' : '#00ff88';
+    ctx.strokeStyle = arrowColor; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(cx - 15, cy); ctx.lineTo(cx + 15, cy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx, cy - 15); ctx.lineTo(cx, cy + 15); ctx.stroke();
+
+    // Offset label for debugging
+    ctx.fillStyle = '#555'; ctx.font = '9px Inter';
+    ctx.fillText(`offset: ${avgOffset.toFixed(2)}`, 4, canvas.height - 4);
+
+    updateGazeUI(gazeZone);
+    sendGazeToBackend(gazeZone, lookingAway);
+  });
+
+  // Run face mesh every 2s while camera is active
+  _gazeInterval = setInterval(async () => {
+    if (!stream || !videoEl.videoWidth) return;
+    try { await _faceMesh.send({ image: videoEl }); } catch(e) { console.warn('[EyeTrack]', e); }
+  }, 2000);
+}
+
+
+
+
+
+// ── VOICE STRESS DETECTION — Web Audio API ─────────────────────────────────────────
+let _audioCtx = null, _analyser = null, _micStream = null, _voiceTimer = null;
+let _voiceActive = false;
+
+async function toggleVoice() {
+  const btn = document.getElementById('voiceBtn');
+  if (_voiceActive) {
+    // Stop
+    if (_micStream) _micStream.getTracks().forEach(t => t.stop());
+    if (_voiceTimer) clearInterval(_voiceTimer);
+    if (_audioCtx)   _audioCtx.close();
+    _voiceActive = false;
+    btn.textContent = '🎤 Start Voice Analysis';
+    btn.style.borderColor = '#333';
+    document.getElementById('voiceLabel').textContent = 'Stopped';
+    document.getElementById('voiceLabel').style.color = '#aaa';
+    return;
+  }
+
+  try {
+    _micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    _audioCtx  = new (window.AudioContext || window.webkitAudioContext)();
+    _analyser  = _audioCtx.createAnalyser();
+    _analyser.fftSize = 256;
+    const source = _audioCtx.createMediaStreamSource(_micStream);
+    source.connect(_analyser);
+
+    _voiceActive = true;
+    btn.textContent = '⏹ Stop Voice Analysis';
+    btn.style.borderColor = '#00C851';
+
+    _voiceTimer = setInterval(analyzeVoice, 1500);
+  } catch(e) {
+    document.getElementById('voiceDesc').textContent = 'Microphone access denied';
+  }
+}
+
+function analyzeVoice() {
+  if (!_analyser) return;
+
+  const bufLen  = _analyser.frequencyBinCount;
+  const freqData = new Uint8Array(bufLen);
+  const timeData = new Uint8Array(bufLen);
+  _analyser.getByteFrequencyData(freqData);
+  _analyser.getByteTimeDomainData(timeData);
+
+  // RMS energy (volume)
+  let sumSq = 0;
+  for (let i = 0; i < timeData.length; i++) {
+    const v = (timeData[i] - 128) / 128;
+    sumSq += v * v;
+  }
+  const rms = Math.sqrt(sumSq / timeData.length);
+
+  // Pitch estimate: find dominant frequency bin
+  let maxVal = 0, maxIdx = 0;
+  for (let i = 0; i < freqData.length; i++) {
+    if (freqData[i] > maxVal) { maxVal = freqData[i]; maxIdx = i; }
+  }
+  const sampleRate   = _audioCtx.sampleRate;
+  const pitchHz      = maxIdx * sampleRate / (_analyser.fftSize);
+  const pitchNorm    = Math.min(1.0, pitchHz / 400);  // normalise: 400Hz = max stress
+
+  // Speech rate: count zero crossings (proxy for speed)
+  let crossings = 0;
+  for (let i = 1; i < timeData.length; i++) {
+    if ((timeData[i-1] < 128) !== (timeData[i] < 128)) crossings++;
+  }
+  const speechRate = Math.min(1.0, crossings / 60);
+
+  // Silence ratio: how much of buffer is near-zero
+  const silentSamples = timeData.filter(v => Math.abs(v - 128) < 5).length;
+  const silenceRatio  = silentSamples / timeData.length;
+
+  // Draw waveform on canvas
+  const canvas = document.getElementById('voiceCanvas');
+  const ctx    = canvas.getContext('2d');
+  ctx.fillStyle = '#0d1117';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  const stressColor = rms > 0.3 ? '#FF4444' : rms > 0.1 ? '#FF8800' : '#00C851';
+  ctx.strokeStyle = stressColor; ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  const sliceW = canvas.width / timeData.length;
+  for (let i = 0; i < timeData.length; i++) {
+    const y = (timeData[i] / 255) * canvas.height;
+    i === 0 ? ctx.moveTo(0, y) : ctx.lineTo(i * sliceW, y);
+  }
+  ctx.stroke();
+
+  // Update UI
+  const stressScore = Math.round((pitchNorm * 0.35 + speechRate * 0.25 + (1-rms) * 0.20 + silenceRatio * 0.20) * 100);
+  const label = stressScore < 30 ? 'Calm' : stressScore < 60 ? 'Mild Stress' : 'High Stress';
+  const color = stressScore < 30 ? '#00C851' : stressScore < 60 ? '#FF8800' : '#FF4444';
+
+  document.getElementById('voiceIcon').textContent  = stressScore < 30 ? '🎤' : stressScore < 60 ? '🗣️' : '🚨';
+  document.getElementById('voiceLabel').textContent = label + ' (' + stressScore + '%)';
+  document.getElementById('voiceLabel').style.color = color;
+  document.getElementById('voiceDesc').textContent  = `Pitch: ${Math.round(pitchHz)}Hz | Vol: ${Math.round(rms*100)}%`;
+
+  // Send to backend
+  fetch('/api/voice-stress', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      session_id:     sessionId,
+      rms_energy:     Math.round(rms * 1000) / 1000,
+      pitch_estimate: Math.round(pitchNorm * 1000) / 1000,
+      speech_rate:    Math.round(speechRate * 1000) / 1000,
+      silence_ratio:  Math.round(silenceRatio * 1000) / 1000,
+    })
+  }).catch(() => {});
+}
+
+// ── ML PREDICTION UI ───────────────────────────────────────────────────────────────────────────────────────
+function updateMLPredUI(ml) {
+  if (!ml || !ml.available) {
+    document.getElementById('mlPredIcon').textContent  = '⚠️';
+    document.getElementById('mlPredLabel').textContent = 'Model not loaded';
+    document.getElementById('mlPredSub').textContent   = 'Run train_model.py to enable';
+    document.getElementById('mlPredFill').style.width  = '0%';
+    document.getElementById('mlProbaWrong').textContent   = '--';
+    document.getElementById('mlProbaCorrect').textContent = '--';
+    document.getElementById('mlSuggestedDiff').textContent = '--';
+    return;
+  }
+
+  const willCorrect = ml.will_correct;
+  const conf        = Math.round((ml.confidence || 0) * 100);
+  const color       = willCorrect ? '#00C851' : '#FF4444';
+  const icon        = willCorrect ? '✅' : '❌';
+  const label       = willCorrect ? 'Likely Correct' : 'Likely Wrong';
+  const sub         = `Confidence: ${conf}%`;
+
+  const diffColors  = { easy: '#00C851', medium: '#FF8800', hard: '#FF4444' };
+  const sugDiff     = ml.suggested_difficulty || '--';
+
+  document.getElementById('mlPredIcon').textContent          = icon;
+  document.getElementById('mlPredLabel').textContent         = label;
+  document.getElementById('mlPredLabel').style.color         = color;
+  document.getElementById('mlPredSub').textContent           = sub;
+  document.getElementById('mlPredFill').style.width          = conf + '%';
+  document.getElementById('mlPredFill').style.background     = color;
+  document.getElementById('mlProbaWrong').textContent        = Math.round((ml.proba_wrong   || 0) * 100) + '%';
+  document.getElementById('mlProbaCorrect').textContent      = Math.round((ml.proba_correct || 0) * 100) + '%';
+  document.getElementById('mlSuggestedDiff').textContent     = sugDiff.charAt(0).toUpperCase() + sugDiff.slice(1);
+  document.getElementById('mlSuggestedDiff').style.color     = diffColors[sugDiff] || '#aaa';
+}
+
+// Hook hand tracking into camera start/stop
+const _origToggleCam2 = toggleCamera;
+toggleCamera = async function() {
+  await _origToggleCam2();
+  if (stream) {
+    initHandTracking();
+  }
+};
+</script>
+</body>
+</html>

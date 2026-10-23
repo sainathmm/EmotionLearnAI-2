@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EmotionLearnAI — Candidate Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Inter',sans-serif}
+body{background:#0f0f1a;color:#fff;min-height:100vh;display:flex;flex-direction:column}
+.header{background:linear-gradient(135deg,#1a1a2e,#16213e);padding:15px 30px;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #0099CC}
+.logo{font-size:22px;font-weight:700;color:#0099CC}
+.logo span{color:#fff}
+.nav-links{display:flex;gap:10px}
+.nav-links a{padding:6px 14px;border:1px solid #333;border-radius:8px;color:#aaa;font-size:12px;text-decoration:none;transition:all 0.2s}
+.nav-links a:hover{border-color:#0099CC;color:#0099CC}
+.main{max-width:1000px;margin:0 auto;padding:30px 20px;width:100%}
+.page-title{font-size:28px;font-weight:800;margin-bottom:6px}
+.page-title span{color:#0099CC}
+.page-sub{font-size:14px;color:#aaa;margin-bottom:30px}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+.stat-card{background:#1a1a2e;border:1px solid #2a2a3e;border-radius:12px;padding:18px;text-align:center}
+.stat-val{font-size:28px;font-weight:800;color:#0099CC}
+.stat-lbl{font-size:12px;color:#555;margin-top:4px}
+.card{background:#1a1a2e;border:1px solid #2a2a3e;border-radius:14px;padding:24px;margin-bottom:20px}
+.card h3{font-size:16px;font-weight:700;margin-bottom:16px;color:#0099CC}
+.interview-row{display:flex;align-items:center;justify-content:space-between;padding:12px;background:#0d1117;border-radius:8px;margin-bottom:8px;border:1px solid #2a2a3e}
+.interview-row:hover{border-color:#0099CC}
+.ir-info{flex:1}
+.ir-role{font-size:14px;font-weight:600}
+.ir-meta{font-size:12px;color:#555;margin-top:2px}
+.ir-score{font-size:18px;font-weight:800;color:#0099CC;margin:0 16px}
+.btn{padding:7px 16px;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.2s;text-decoration:none;display:inline-block}
+.btn-primary{background:#0099CC;color:#fff}
+.btn-primary:hover{background:#007aa3}
+.skill-bar-row{display:flex;align-items:center;gap:12px;margin-bottom:10px;font-size:13px}
+.skill-name{width:140px;color:#aaa}
+.skill-track{flex:1;background:#0d1117;border-radius:6px;height:8px;overflow:hidden}
+.skill-fill{height:8px;border-radius:6px;transition:width 0.5s}
+.skill-pct{width:40px;text-align:right;font-size:12px;color:#aaa}
+.gap-item{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#0d1117;border-radius:8px;margin-bottom:8px;font-size:13px}
+.gap-badge{padding:2px 10px;border-radius:12px;font-size:11px;font-weight:700}
+.gap-strong{background:#00C85122;color:#00C851}
+.gap-medium{background:#FF880022;color:#FF8800}
+.gap-weak{background:#FF444422;color:#FF4444}
+.gap-na{background:#33333322;color:#666}
+.rec-box{background:#0099CC11;border:1px solid #0099CC33;border-radius:8px;padding:14px;font-size:13px;color:#aaa;line-height:1.7}
+.rec-box strong{color:#0099CC}
+.empty-state{text-align:center;padding:30px;color:#555}
+.score-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700}
+.score-high{background:#00C85122;color:#00C851;border:1px solid #00C85144}
+.score-mid{background:#FF880022;color:#FF8800;border:1px solid #FF880044}
+.score-low{background:#FF444422;color:#FF4444;border:1px solid #FF444444}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="logo">🧠 Emotion<span>LearnAI</span> <span style="color:#0099CC;font-size:14px;font-weight:600">— Candidate Dashboard</span></div>
+  <div class="nav-links">
+    <a href="/select-role">🏠 Home</a>
+    <a href="/interview">💼 New Interview</a>
+    <a href="/skill-assessment">🛠️ Skill Test</a>
+    <a href="/logout">Logout</a>
+  </div>
+</div>
+<div class="main">
+  <div class="page-title">📊 Candidate <span>Dashboard</span></div>
+  <div class="page-sub">Your interview history, skill profile, and personalized development roadmap.</div>
+
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-val" id="totalInterviews">0</div><div class="stat-lbl">Interviews Taken</div></div>
+    <div class="stat-card"><div class="stat-val" id="avgScore">--</div><div class="stat-lbl">Avg Interview Score</div></div>
+    <div class="stat-card"><div class="stat-val" id="skillsTested">0</div><div class="stat-lbl">Skills Assessed</div></div>
+    <div class="stat-card"><div class="stat-val" id="strongSkills">0</div><div class="stat-lbl">Strong Skills</div></div>
+  </div>
+
+  <div class="card">
+    <h3>💼 Interview History</h3>
+    <div id="interviewHistory"><div class="empty-state">No interviews yet. <a href="/interview" style="color:#0099CC">Start one →</a></div></div>
+  </div>
+
+  <div class="card">
+    <h3>🛠️ Skill Profile</h3>
+    <div style="margin-bottom:14px;display:flex;gap:10px;align-items:center">
+      <label style="font-size:13px;color:#aaa">Job Role:</label>
+      <select id="roleSelect" onchange="loadSkillGap()" style="padding:6px 12px;background:#0d1117;border:1px solid #333;border-radius:8px;color:#fff;font-size:13px;outline:none">
+        <option>Software Developer</option>
+        <option>Frontend Developer</option>
+        <option>Backend Developer</option>
+        <option>Full Stack Developer</option>
+        <option>Data Analyst</option>
+        <option>Data Scientist</option>
+        <option>Cybersecurity Analyst</option>
+        <option>Cloud Engineer</option>
+      </select>
+    </div>
+    <div id="skillGapContent"><div class="empty-state">Loading skill profile...</div></div>
+  </div>
+
+  <div class="card">
+    <h3>🗺️ Personalized Development Roadmap</h3>
+    <div id="roadmapContent" class="rec-box">Loading recommendations...</div>
+  </div>
+</div>
+
+<script>
+async function loadDashboard() {
+  const [interviews, skills] = await Promise.all([
+    fetch('/api/interview/history').then(r => r.json()).catch(() => []),
+    fetch('/api/skill-assessment/history').then(r => r.json()).catch(() => [])
+  ]);
+
+  // Stats
+  document.getElementById('totalInterviews').textContent = interviews.length;
+
+  // Avg interview score — fetch reports for completed interviews
+  if (interviews.length) {
+    const completed = interviews.filter(i => i.answered > 0);
+    if (completed.length) {
+      try {
+        const reports = await Promise.all(
+          completed.slice(0, 5).map(iv =>
+            fetch('/api/interview/report/' + iv.id).then(r => r.json()).catch(() => null)
+          )
+        );
+        const validScores = reports.filter(r => r && r.summary && r.summary.avg_score > 0).map(r => r.summary.avg_score);
+        if (validScores.length) {
+          const avg = (validScores.reduce((a, b) => a + b, 0) / validScores.length).toFixed(1);
+          document.getElementById('avgScore').textContent = avg + '/10';
+        } else {
+          document.getElementById('avgScore').textContent = '--';
+        }
+      } catch(e) {
+        document.getElementById('avgScore').textContent = '--';
+      }
+    } else {
+      document.getElementById('avgScore').textContent = '--';
+    }
+  }
+
+  const uniqueCategories = [...new Set(skills.map(s => s.category))];
+  document.getElementById('skillsTested').textContent = uniqueCategories.length;
+  const strong = skills.filter(s => s.score >= 75);
+  document.getElementById('strongSkills').textContent = strong.length;
+
+  // Interview history
+  const histEl = document.getElementById('interviewHistory');
+  if (!interviews.length) {
+    histEl.innerHTML = '<div class="empty-state">No interviews yet. <a href="/interview" style="color:#0099CC">Start one →</a></div>';
+  } else {
+    histEl.innerHTML = '';
+    for (const iv of interviews) {
+      let scoreHtml = '';
+      if (iv.answered > 0) {
+        try {
+          const rpt = await fetch('/api/interview/report/' + iv.id).then(r => r.json()).catch(() => null);
+          if (rpt && rpt.summary) {
+            const sc = rpt.summary.avg_score;
+            const cls = sc >= 7 ? 'score-high' : sc >= 4 ? 'score-mid' : 'score-low';
+            scoreHtml = `<span class="score-badge ${cls}" style="margin-right:10px">${sc}/10</span>`;
+          }
+        } catch(e) {}
+      }
+      histEl.innerHTML += `<div class="interview-row">
+        <div class="ir-info">
+          <div class="ir-role">💼 ${iv.job_role} — ${iv.interview_type}</div>
+          <div class="ir-meta">${iv.answered}/${iv.total_questions} answered &bull; ${(iv.created_at||'').substring(0,10)}</div>
+        </div>
+        ${scoreHtml}
+        <a href="/interview-report/${iv.id}" class="btn btn-primary" style="text-decoration:none">View Report</a>
+      </div>`;
+    }
+  }
+
+  loadSkillGap();
+}
+
+async function loadSkillGap() {
+  const role = document.getElementById('roleSelect').value;
+  const gap = await fetch('/api/skill-gap?job_role=' + encodeURIComponent(role)).then(r => r.json()).catch(() => null);
+  if (!gap) return;
+
+  const el = document.getElementById('skillGapContent');
+  el.innerHTML = '';
+
+  if (gap.strengths.length) {
+    el.innerHTML += '<div style="font-size:13px;font-weight:600;color:#00C851;margin-bottom:8px">✅ Strengths</div>';
+    gap.strengths.forEach(s => {
+      el.innerHTML += `<div class="gap-item"><span>${s.skill}</span><span class="gap-badge gap-strong">Strong ${s.score}%</span></div>`;
+    });
+  }
+
+  if (gap.gaps.length) {
+    el.innerHTML += '<div style="font-size:13px;font-weight:600;color:#FF8800;margin:12px 0 8px">⚠️ Gaps & Areas to Improve</div>';
+    gap.gaps.forEach(g => {
+      const cls = g.status === 'Weak' ? 'gap-weak' : g.status === 'Medium' ? 'gap-medium' : 'gap-na';
+      const score = g.score !== null ? g.score + '%' : 'Not Assessed';
+      el.innerHTML += `<div class="gap-item"><span>${g.skill}</span><span class="gap-badge ${cls}">${g.status} ${score}</span></div>`;
+    });
+  }
+
+  if (!gap.strengths.length && !gap.gaps.length) {
+    el.innerHTML = '<div class="empty-state">Take skill assessments to build your profile.</div>';
+  }
+
+  // Roadmap
+  const roadmap = document.getElementById('roadmapContent');
+  const gapSkills = gap.gaps.filter(g => g.status !== 'Not Assessed' || true).slice(0, 4);
+  let html = `<strong>Development Roadmap for ${role}</strong><br><br>`;
+  if (gap.gaps.length === 0) {
+    html += '🎉 Great skill coverage! Practice advanced topics and mock interviews to stay sharp.';
+  } else {
+    html += '📌 Recommended next steps:<br>';
+    gap.gaps.slice(0, 4).forEach((g, i) => {
+      const action = g.status === 'Not Assessed' ? 'Take the skill assessment' :
+                     g.status === 'Weak' ? 'Study fundamentals and practice questions' :
+                     'Practice intermediate-level problems';
+      html += `<br>${i+1}. <strong>${g.skill}</strong> — ${action}`;
+    });
+    html += `<br><br>💡 ${gap.recommendation}`;
+  }
+  roadmap.innerHTML = html;
+}
+
+loadDashboard();
+</script>
+</body>
+</html>
